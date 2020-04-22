@@ -25,7 +25,7 @@ Tekton管道定义了以下实体:
   </tr>
   <tr>
     <td><code>Task</code></td>
-    <td>任务定义一系列步骤来运行特定的构建与交付工具，以此通过特定的输入来产生特定的输出</td>
+    <td>定义一系列步骤来运行特定的构建与交付工具，以此通过特定的输入来产生特定的输出</td>
   </tr>
   <tr>
     <td><code>TaskRun</code></td>
@@ -47,7 +47,7 @@ Tekton管道定义了以下实体:
 
 ## 开始
 
-你可以通过完成[Tekton管道手册](https://github.com/tektoncd/pipeline/blob/master/docs/tutorial.md)以及跟随[示例](https://github.com/tektoncd/pipeline/tree/master/examples)来快速入门。
+你可以通过完成[Tekton管道手册](tutorial.md)以及跟随[示例](https://github.com/tektoncd/pipeline/tree/master/examples)来快速入门。
 
 
 ## 理解Tekton管道

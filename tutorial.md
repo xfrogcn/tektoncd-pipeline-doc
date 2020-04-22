@@ -1,31 +1,26 @@
-# Tekton Pipelines Tutorial
+# Tekton管道手册
 
-This tutorial uses a simple `Hello World` example to show you how to:
-- Create a `Task`
-- Create a `Pipeline` containing your `Tasks`
-- Use a `TaskRun` to instantiate and execute a `Task` outside of a `Pipeline`
-- Use a `PipelineRun` to instantiate and run a `Pipeline` containing your `Tasks`
+本手册通过一个简单的`Hello World`示例来展示如何：
+- 创建一个`任务(Task)`
+- 创建一个包含你`任务(Task)`的`管道(Pipeline)`
+- 使用`TaskRun`来实例化并执行`任务(Task)`
+- 使用`PipelineRun`来实例化并运行包含你`任务(Task)`的`管道(Pipeline)`
 
-This tutorial consists of the following sections:
+本手册包含一下章节：
+- [创建并运行一个`Task`](#创建并运行一个`任务`)
+- [创建并运行一个`Pipeline`](#创建并运行一个`Pipeline`)
 
-- [Creating and running a `Task`](#creating-and-running-a-task)
-- [Creating and running a `Pipeline`](#creating-and-running-a-pipeline)
+**注意:** 必须要配置的项通过`#配置`注释来标注，可能包括Docker仓库，日志输出位置以及其他配置项，你必须替换为实际配置。
 
-**Note:** Items requiring configuration are marked with the `#configure` annotation.
-This includes Docker registries, log output locations, and other configuration items
-specific to a given cloud computing service.
+## 开始之前
 
-## Before you begin
+在开始之前，请确保你已经在Kubernetes集群中[安装和配置](install.md)了最新的Tekton，包括[Tekton命令行](https://github.com/tektoncd/cli)
 
-Before you begin this tutorial, make sure you have [installed and configured](https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
-the latest release of Tekton on your Kubernetes cluster, including the
-[Tekton CLI](https://github.com/tektoncd/cli).
+如果你想要在本地工作站完成此手册，请参考[在本地运行](#在本地运行)，想要获取更多本手册相关的Tekton实体，请参考[延伸阅读](#延伸阅读)
 
-If you would like to complete this tutorial on your local workstation, see [Running this tutorial locally](#running-this-tutorial-locally). To learn more about the Tekton entities involved in this tutorial, see [Further reading](#further-reading).
+## 创建并运行一个`任务`
 
-## Creating and running a `Task`
-
-A [`Task`](tasks.md) defines a series of `steps` that run in a desired order and complete a set amount of build work. Every `Task` runs as a Pod on your Kubernetes cluster with each `step` as its own container. For example, the following `Task` outputs "Hello World":
+[`Task`](tasks.md)定义一系列的`步骤`以预期的顺序来完成构建工作。每一个`Task`在Kubernetes集群中作为一个Pod来运行，每一个`步骤`作为Pod中独立的容器。例如，以下示例`Task`，输出"Hello World":
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -42,18 +37,18 @@ spec:
         - "Hello World"
 ```
 
-Apply your `Task` YAML file as follows:
+通过以下命令应用`Task` YAML文件：
 
 ```bash
 kubectl apply -f <name-of-task-file.yaml>
 ```
 
-To see details about your created `Task`, use the following command:  
+要查看`Task`的详细信息, 可使用以下命令:  
 ```bash
 tkn task describe echo-hello-world
 ```
 
-The output will look similar to the following:
+命令输出结果如下:
 
 ```
 Name:        echo-hello-world
@@ -80,7 +75,7 @@ Namespace:   default
  No taskruns
 ```
 
-To run this `Task`, instantiate it using a [`TaskRun`](taskruns.md):
+要运行此`Task`, 通过使用[`TaskRun`](taskruns.md)来实例化:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -92,19 +87,19 @@ spec:
     name: echo-hello-world
 ```
 
-Apply your `TaskRun` YAML file as follows:
+通过以下命令来应用`TaskRun` YAML文件:
 
 ```bash
 kubectl apply -f <name-of-taskrun-file.yaml>
 ```
 
-To check whether running your `TaskRun` succeeded, use the following command:
+通过以下命令查询`TaskRun`是否执行成功:
 
 ```bash
 tkn taskrun describe echo-hello-world-task-run
 ```
 
-The output will look similar to the following:
+命令输出结果如下:
 
 ```
 Name:        echo-hello-world-task-run
@@ -129,30 +124,27 @@ NAME
 echo
 ```
 
-The `Succeeded` status confirms that the `TaskRun` completed with no errors.
+状态为`Succeeded`表示`TaskRun`成功无错误地完成.
 
-To see more detail about the execution of your `TaskRun`, view its logs as follows:
+要查看`TaskRun`运行的详细日志, 可通过如下命令:
 
 ```bash
 tkn taskrun logs echo-hello-world-task-run
 ```
 
-The output will look similar to the following:
+此命令输出结果如下:
 
 ```
 [echo] hello world
 ```
 
-### Specifying `Task` inputs and outputs
+### 指定`Task`的输入与输出
 
-In more complex scenarios, a `Task` requires you to define inputs and outputs. For example, a
-`Task` could fetch source code from a GitHub repository and build a Docker image from it.
+在更为复杂的场景中，你需要为`Task`定义输入与输出，例如`Task`实现从GitHub仓库拉取代码然后构建Docker镜像的任务
 
-Use one or more [`PipelineResources`](resources.md) to define the artifacts you want to pass in
-and out of your `Task`. The following are examples of the most commonly needed resources.
+通过使用[`PipelineResources`](resources.md)来定义你需要传入或由`Task`输出的物料，以下示例为常见的资源定义
 
-The [`git` resource](resources.md#git-resource) specifies a git repository with
-a specific revision from which the `Task` will pull the source code:
+[`git`资源](resources.md#git-resource) 指定一个git仓库和特定的版本来指明`Task`将要拉取代码的位置:
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -165,10 +157,10 @@ spec:
     - name: revision
       value: master
     - name: url
-      value: https://github.com/GoogleContainerTools/skaffold #configure: change if you want to build something else, perhaps from your own local git repository.
+      value: https://github.com/GoogleContainerTools/skaffold #配置: 如果你要构建其他的仓库，请修改为你的本地git仓库地址
 ```
 
-The [`image` resource](resources.md#image-resource) specifies the repository to which the image built by the `Task` will be pushed:
+[`image`资源](resources.md#image-resource) 定义`Task`构建的镜像将要push到的镜像仓库位置:
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -179,12 +171,10 @@ spec:
   type: image
   params:
     - name: url
-      value: gcr.io/<use your project>/leeroy-web #configure: replace with where the image should go: perhaps your local registry or Dockerhub with a secret and configured service account
+      value: gcr.io/<use your project>/leeroy-web #配置: 替换为实际的仓库路径: 可能是你的本地仓库或Dockerhub，并且已通过service account配置了密文
 ```
 
-In the following example, you can see a `Task` definition with the `git` input and `image` output
-introduced earlier. The arguments of the `Task` command support variable substitution so that
-the `Task` definition is constant and the value of parameters can change during runtime.
+在以下示例中，你可以看到一个`Task`定义了`git`输入以及`image`输出，`Task`命令的参数支持变量替换，所以`Task`定义是固定的，但它的值可在运行时改变
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -213,7 +203,7 @@ spec:
   steps:
     - name: build-and-push
       image: gcr.io/kaniko-project/executor:v0.17.1
-      # specifying DOCKER_CONFIG is required to allow kaniko to detect docker credential
+      # 必须指定DOCKER_CONFIG，以便kaniko获取到docker凭证
       env:
         - name: "DOCKER_CONFIG"
           value: "/tekton/home/.docker/"
@@ -225,10 +215,9 @@ spec:
         - --context=$(params.pathToContext)
 ```
 
-### Configuring `Task` execution credentials
+### 配置`Task`执行凭证
 
-Before you can execute your `TaskRun`, you must create a `secret` to push your image
-to your desired image registry:
+在你执行`TaskRun`之前，你必须创建一个`secret`来push镜像到你的仓库:
 
 ```bash
 kubectl create secret docker-registry regcred \
@@ -238,7 +227,7 @@ kubectl create secret docker-registry regcred \
                     --docker-email=<your-email>
 ```
 
-You must also specify a `ServiceAccount` that uses this `secret` to execute your `TaskRun`:
+然后你可以通过`ServiceAccount`来关联此`secret`，通过此服务账户来执行你的`TaskRun`:
 
 ```yaml
 apiVersion: v1
@@ -249,18 +238,17 @@ secrets:
   - name: regcred
 ```
 
-Save the `ServiceAccount` definition above to a file and apply the YAML file to make the `ServiceAccount` available for your `TaskRun`:
+保存上述`ServiceAccount`定义为文件，然后通过kubectl命令应用此YAML文件:
 
 ```bash
 kubectl apply -f <name-of-file.yaml>
 ```
 
-### Running your `Task`
+### 运行`Task`
 
-You are now ready for your first `TaskRun`!
+到此，你已经为第一个`TaskRun`做好准备了!
 
-A `TaskRun` binds the inputs and outputs to already defined `PipelineResources`, sets values
-for variable substitution parameters, and executes the `Steps` in the `Task`.
+`TaskRun`绑定了通过`PipelineResources`定义的输入和输出，然后通过变量替换设置参数值，最后执行`Task`中的`Steps`
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -275,7 +263,7 @@ spec:
     - name: pathToDockerFile
       value: Dockerfile
     - name: pathToContext
-      value: $(resources.inputs.docker-source.path)/examples/microservices/leeroy-web #configure: may change according to your source
+      value: $(resources.inputs.docker-source.path)/examples/microservices/leeroy-web #配置: 你可以修改为自己的源码路径
   resources:
     inputs:
       - name: docker-source
@@ -287,19 +275,19 @@ spec:
           name: skaffold-image-leeroy-web
 ```
 
-Save the YAML files that contain your `Task`, `TaskRun`, and `PipelineResource` definitions and apply them using the following command:
+保存此YAML文件，文件包含你的`Task`, `TaskRun`, 以及 `PipelineResource`定义，然后通过以下命令应用:
 
 ```bash
 kubectl apply -f <name-of-file.yaml>
 ```
 
-To examine the resources you've created so far, use the following command:
+通过以下命令可检查以上动作所创建的资源:
 
 ```bash
 kubectl get tekton-pipelines
 ```
 
-The output will look similar to the following:
+命令输出如下:
 
 ```
 NAME                                                   AGE
@@ -313,13 +301,13 @@ NAME                                       AGE
 tasks/build-docker-image-from-git-source   7m
 ```
 
-To see the result of executing your `TaskRun`, use the following command:
+通过以下命令查看`TaskRun`执行结果:
 
 ```bash
 tkn taskrun describe build-docker-image-from-git-source-task-run
 ```
 
-The output will look similar to the following:
+命令输出结果如下:
 
 ```
 Name:        build-docker-image-from-git-source-task-run
@@ -351,23 +339,20 @@ git-source-skaffold-git-tck6k
 image-digest-exporter-hlbsq
 ```
 
-The `Succeeded` status indicates the `Task` has completed with no errors. You
-can also confirm that the output Docker image has been created in the location specified in the resource definition.
+`Succeeded`状态代表`Task`任务成功无错误地完成。你也可以确认输出的Docker镜像已经push到了资源定义的位置。
 
-To view detailed information about the execution of your `TaskRun`, view the logs:
+要查看`TaskRun`执行过程中的详细信息, 可查看其日志:
 
 ```bash
 tkn taskrun logs build-docker-image-from-git-source-task-run
 ```
 
-## Creating and running a `Pipeline`
+## 创建并运行一个`Pipeline`
 
-A [`Pipeline`](pipelines.md) defines an ordered series of `Tasks` that you want to execute
-along with the corresponding inputs and outputs for each `Task`. You can specify whether the output of one
-`Task` is used as an input for the next `Task` using the [`from`](pipelines.md#from) property.
-`Pipelines` offer the same variable substitution as `Tasks`.
+[`Pipeline`](pipelines.md) 包含一组想要执行的有序的`Task`，以及每一个`Task`相关的输入与输出。通过[`from`](pipelines.md#from) 属性, 你可以将一个`Task`的输出作为另一个`Task`的输入.
+`Pipelines`同样提供与`Task`一致的变量替换功能
 
-Below is an example definition of a `Pipeline`:
+以下为一个`Pipeline`示例:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -388,7 +373,7 @@ spec:
         - name: pathToDockerFile
           value: Dockerfile
         - name: pathToContext
-          value: /workspace/docker-source/examples/microservices/leeroy-web #configure: may change according to your source
+          value: /workspace/docker-source/examples/microservices/leeroy-web #配置: 可修改为你的实际代码位置
       resources:
         inputs:
           - name: docker-source
@@ -409,12 +394,12 @@ spec:
               - build-skaffold-web
       params:
         - name: path
-          value: /workspace/source/examples/microservices/leeroy-web/kubernetes/deployment.yaml #configure: may change according to your source
+          value: /workspace/source/examples/microservices/leeroy-web/kubernetes/deployment.yaml #配置: 可修改为你的实际代码位置
         - name: yamlPathToImage
           value: "spec.template.spec.containers[0].image"
 ```
 
-The above `Pipeline` is referencing a `Task` called `deploy-using-kubectl` defined as follows:
+以上`Pipeline`引用了一个名称为`deploy-using-kubectl`的`Task`，其定义如下:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -455,12 +440,11 @@ spec:
         - "$(params.path)"
 ```
 
-### Configuring `Pipeline` execution credentials
+### 配置`Pipeline`的执行凭证
 
-The `run-kubectl` step in the above example requires additional permissions. You must grant those
-permissions to your `ServiceAccount`.
+以上`run-kubectl`步骤需要附加权限，你必须赋予这些权限到你的`ServiceAccount`
 
-First, create a new role called `tutorial-role`:
+首先，创建一个新的角色`tutorial-role`:
 
 ```bash
 kubectl create clusterrole tutorial-role \
@@ -468,7 +452,7 @@ kubectl create clusterrole tutorial-role \
                --resource=deployments,deployments.apps
 ```
 
-Next, assign this new role to your `ServiceAccount`:
+然后, 将此角色赋给`ServiceAccount`:
 
 ```bash
 kubectl create clusterrolebinding tutorial-binding \
@@ -476,7 +460,7 @@ kubectl create clusterrolebinding tutorial-binding \
              --serviceaccount=default:tutorial-service
 ```
 
-To run your `Pipeline`, instantiate it with a [`PipelineRun`](pipelineruns.md) as follows:
+要运行`Pipeline`, 可通过[`PipelineRun`](pipelineruns.md) 来实例化:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -496,36 +480,33 @@ spec:
         name: skaffold-image-leeroy-web
 ```
 
-The `PipelineRun` automatically defines a corresponding `TaskRun` for each `Task` you have defined
-in your `Pipeline` collects the results of executing each `TaskRun`. In our example, the
-`TaskRun` order is as follows:
+`PipelineRun`将会自动为每一个的`Task`定义相关的`TaskRun`，然后收集每一个执行`Task`的结果， 在上述示例中，`TaskRun`的顺序如下:
 
-1. `tutorial-pipeline-run-1-build-skaffold-web` runs `build-skaffold-web`,
-   since it has no [`from` or `runAfter` clauses](pipelines.md#ordering).
-1. `tutorial-pipeline-run-1-deploy-web` runs `deploy-web` because
-   its [input](tasks.md#inputs) `web-image` comes [`from`](pipelines.md#from)
-   `build-skaffold-web`. Thus, `build-skaffold-web` must run before `deploy-web`.
+1. `tutorial-pipeline-run-1-build-skaffold-web` 运行 `build-skaffold-web`,
+   因为他们没有[`from` 或者 `runAfter` 子句](pipelines.md#ordering).
+1. `tutorial-pipeline-run-1-deploy-web` 运行 `deploy-web` 因为其[input](tasks.md#inputs) `web-image` 来自于 [`from`](pipelines.md#from)
+   `build-skaffold-web`. 因此, `build-skaffold-web` 必须在`deploy-web`任务之前运行
 
-Save the `Task`, `Pipeline`, and `PipelineRun` definitions above to as YAML files and apply them using the following command:
+保存上述`Task`, `Pipeline`, 以及 `PipelineRun`定义到YAML文件，然后使用以下命令应用:
 
 ```bash
 kubectl apply -f <name-of-file.yaml>
 ```
-**Note:** Also apply the `deploy-task` or the `PipelineRun` will not execute.
+**注意:** Also apply the `deploy-task` or the `PipelineRun` will not execute.
 
-You can monitor the execution of your `PipelineRun` in realtime as follows:
+你可以通过以下命令监控`PipelineRun`的运行状态:
 
 ```bash
 tkn pipelinerun logs tutorial-pipeline-run-1 -f
 ```
 
-To view detailed information about your `PipelineRun`, use the following command:
+要查看`PipelineRun`运行的详细信息, 可使用以下命令:
 
 ```bash
 tkn pipelinerun describe tutorial-pipeline-run-1
 ```
 
-The output will look similar to the following:
+命令输出结果如下:
 
 ```bash
 Name:           tutorial-pipeline-run-1
@@ -550,54 +531,50 @@ tutorial-pipeline-run-1-deploy-web-jjf2l           deploy-web           4 hours 
 tutorial-pipeline-run-1-build-skaffold-web-7jgjh   build-skaffold-web   4 hours ago   1 minute     Succeeded
 ```
 
-The `Succeded` status indicates that your `PipelineRun` completed without errors.
-You can also see the statuses of the individual `TaskRuns`.
+`Succeded`状态表示`PipelineRun`无错误完成。
+你也可以查看每个独立的`TaskRuns`的状态.
 
-## Running this tutorial locally
+## 在本地运行
 
-This section provides guidelines for completing this tutorial on your local workstation.
+本节提供在本地工作站完成此向导的步骤
 
-### Prerequisites
+### 先决条件
 
-Complete these prerequisites to run this tutorial locally:
+要在本地完成此手册，需先完成以下事项:
 
-- Install the [required tools](https://github.com/tektoncd/pipeline/blob/master/DEVELOPMENT.md#requirements).
-- Install [Docker for Desktop](https://www.docker.com/products/docker-desktop) and configure it to use six CPUs,
-  10 GB of RAM and 2GB of swap space.
-- Set `host.docker.local:5000` as an insecure registry with Docker for
-  Desktop. See the [Docker insecure registry documentation](https://docs.docker.com/registry/insecure/).
-  for details.
-- Pass `--insecure` as an argument to your Kaniko tasks so that you can push to an insecure registry.
-- Run a local (insecure) Docker registry as follows:
+- 安装[必要工具](https://github.com/tektoncd/pipeline/blob/master/DEVELOPMENT.md#requirements).
+- 安装 [Docker for Desktop](https://www.docker.com/products/docker-desktop) 并配置其使用6个CPU,
+  10 GB内存以及2GB的交换空间
+- 设置`host.docker.local:5000`为不安全docker仓库. 参考[Docker非安全仓库文档](https://docs.docker.com/registry/insecure/)了解更多详情.
+- 传入 `--insecure` 参数到Kaniko任务，以便可以push镜像到非安全仓库.
+- 运行本地(非安全)Docker仓库:
 
   `docker run -d -p 5000:5000 --name registry-srv -e REGISTRY_STORAGE_DELETE_ENABLED=true registry:2`
 
-- (Optional) Install a Docker registry viewer to verify the images have been pushed:
+- (可选) 安装Docker仓库查看来验证镜像是否被成功push:
 
 `docker run -it -p 8080:8080 --name registry-web --link registry-srv -e REGISTRY_URL=http://registry-srv:5000/v2 -e REGISTRY_NAME=localhost:5000 hyper/docker-registry-web`
 
-- Verify that you can push to `host.docker.internal:5000/myregistry/<image_name>`.
+- 为了验证，你可以push镜像到 `host.docker.internal:5000/myregistry/<image_name>`.
 
-### Reconfigure `image` resources
+### 重新配置 `image` 资源
 
-You must reconfigure any `image` resource definitions in your `PipelineResources` as follows:
+你必须重新配置`PipelineResources`中的`image`资源:
 
-- Set the URL to `host.docker.internal:5000/myregistry/<image_name>`
-- Set the `KO_DOCKER_REPO` variable to `localhost:5000/myregistry` before using `ko`
-- Set your applications (such as deployment definitions) to push to
+- 设置url为 `host.docker.internal:5000/myregistry/<image_name>`
+- 设置 `KO_DOCKER_REPO` 变量为`localhost:5000/myregistry`
+- 设置你的应用(如部署定义)push到
   `localhost:5000/myregistry/<image name>`.
 
-### Reconfigure logging
+### 重新配置日志
 
-- You can keep your logs in memory only without sending them to a logging service
-  such as [Stackdriver](https://cloud.google.com/logging/).
-- You can deploy Elasticsearch, Beats, or Kibana locally to view logs. You can find an
-  example configuration at <https://github.com/mgreau/tekton-pipelines-elastic-tutorials>.
-- To learn more about obtaining logs, see [Logs](logs.md).
+- 你可以在内存中保留日志，而不将其发送到日志服务如[Stackdriver](https://cloud.google.com/logging/).
+- 你可以部署Elasticsearch, Beats, 或者 Kibana 来查询日志. 你可以从以下位置查看配置示例 <https://github.com/mgreau/tekton-pipelines-elastic-tutorials>.
+- 要了解日志的更详细信息，参考[日志](logs.md).
 
-## Further reading
+## 延伸阅读
 
-To learn more about the Tekton Pipelines entities involved in this tutorial, see the following topics:
+要想详细了解本手册调用的Tekton管道实体信息，可参考以下主题:
 
 - [`Tasks`](tasks.md)
 - [`TaskRuns`](taskruns.md)
@@ -607,7 +584,4 @@ To learn more about the Tekton Pipelines entities involved in this tutorial, see
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
