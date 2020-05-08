@@ -1,35 +1,32 @@
-# Installing Tekton Pipelines
+# 安装Tekton管道
 
-This guide explains how to install Tekton Pipelines. It covers the following topics:
+本指南介绍如何安装Tekton管道，包含以下主题：
 
-* [Before you begin](#before-you-begin)
-* [Installing Tekton Pipelines on Kubernetes](#installing-tekton-pipelines-on-kubernetes)
-* [Installing Tekton Pipelines on OpenShift](#installing-tekton-pipelines-on-openshift)
-* [Configuring artifact storage](#configuring-artifact-storage)
-* [Customizing basic execution parameters](#customizing-basic-execution-parameters)
-* [Creating a custom release of Tekton Pipelines](#creating-a-custom-release-of-tekton-pipelines)
-* [Next steps](#next-steps)
+* [开始之前](#开始之前)
+* [在Kubernetes集群中安装Tekton管道](#在Kubernetes集群中安装Tekton管道)
+* [在OpenShift中安装Tekton管道](#在OpenShift中安装Tekton管道)
+* [配置物料存储](#配置物料存储)
+* [自定义基础执行参数](#自定义基础执行参数)
+* [创建自定义Tekton管道版本](#创建自定义Tekton管道版本)
+* [下一步](#下一步)
 
-## Before you begin
+## 开始之前
 
-1. Choose the version of Tekton Pipelines you want to install. You have the following options:
+1. 选择你想要安装的Tekton管道版本:
 
-   * **[Official](https://github.com/tektoncd/pipeline/releases)** - install this unless you have
-     a specific reason to go for a different release.
-   * **[Nightly](../tekton/README.md#nightly-releases)** - may contain bugs,
-     install at your own risk. Nightlies live at `gcr.io/tekton-nightly`.
-   * **[`HEAD`]** - this is the bleeding edge. It contains unreleased code that may result
-     in unpredictable behavior. To get started, see the [development guide](https://github.com/tektoncd/pipeline/blob/master/DEVELOPMENT.md) instead of this page.
+   * **[`正式版`](https://github.com/tektoncd/pipeline/releases)** - 在没有其他特定原因时可选择安装此版本.
+   * **[`每夜构建`](../tekton/README.md#nightly-releases)** - 每日构建的非稳定版本，可能包含bug，镜像为`gcr.io/tekton-nightly`.
+   * **[`HEAD`]**   这是最新的代码，它包含未发布的代码，可能产生无法预料的行为，请参考 [开发指南](https://github.com/tektoncd/pipeline/blob/master/DEVELOPMENT.md).
 
-2. If you don't have an existing Kubernetes cluster, set one up, version 1.15 or later:
+2. 如果你还没有现成的Kubernetes集群，请先安装，要求为1.15及以上版本:
 
    ```bash
-   #Example command for creating a cluster on GKE
+   #在GKE上创建集群的命令示例
    gcloud container clusters create $CLUSTER_NAME \
      --zone=$CLUSTER_ZONE --cluster-version=1.15.11-gke.5
    ```
 
-3. Grant `cluster-admin` permissions to the current user:
+3. 为当前用户赋予 `cluster-admin` 权限:
 
    ```bash
    kubectl create clusterrolebinding cluster-admin-binding \
@@ -37,136 +34,130 @@ This guide explains how to install Tekton Pipelines. It covers the following top
    --user=$(gcloud config get-value core/account)
    ```
 
-   See [Role-based access control](https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control#prerequisites_for_using_role-based_access_control)
-   for more information.
+   请参考 [基于角色的访问控制](https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control#prerequisites_for_using_role-based_access_control).
 
-## Installing Tekton Pipelines on Kubernetes
+## 在Kubernetes集群中安装Tekton管道
 
-To install Tekton Pipelines on a Kubernetes cluster:
+要在Kubernetes集群中安装Tekton，需要:
 
-1. Run the following command to install Tekton Pipelines and its dependencies:
+1. 运行以下命令安装Tekton管道及其依赖:
 
    ```bash
    kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
    ```
-   You can install a specific release using `previous/$VERSION_NUMBER`. For example:
+   你可以通过指定 `previous/$VERSION_NUMBER`来安装特定的版本，例如:
 
    ```bash
     kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.2.0/release.yaml
    ```
 
-   If your container runtime does not support `image-reference:tag@digest`
-   (for example, like `cri-o` used in OpenShift 4.x), use `release.notags.yaml` instead:
+   如果你的容器运行时不支持 `image-reference:tag@digest`
+   (例如, 像在OpenShift 4.x中使用的 `cri-o` ), 那么使用 `release.notags.yaml` 文件来代替:
 
    ```bash
    kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.notags.yaml
    ```
 
-1. Monitor the installation using the following command until all components show a `Running` status:
+1. 通过以下命令监控安装的进度，直到所有的Pod都变成运行状态:
 
    ```bash
    kubectl get pods --namespace tekton-pipelines --watch
    ```
 
-   **Note:** Hit CTRL+C to stop monitoring.
+   **注意:** 通过CTRL+C来停止监控.
 
-Congratulations! You have successfully installed Tekton Pipelines on your Kubernetes cluster. Next, see the following topics:
+恭喜! 你已经成功地在Kubernetes集群中安装了Tekton管道。接下来，你可查看以下主题:
 
-* [Configuring artifact storage](#configuring-artifact-storage) to set up artifact storage for Tekton Pipelines.
-* [Customizing basic execution parameters](#customizing-basic-execution-parameters) if you need to customize your service account, timeout, or Pod template values.
+* [配置物料存储](#配置物料存储) 来配置Tekton管道的存储.
+* [自定义基础执行参数](#自定义基础执行参数) 如果你需要自定义你的服务账户，超时时间或Pod模板值的话，请参考此节内容。
 
-### Installing Tekton Pipelines on OpenShift
+### 在OpenShift中安装Tekton管道
 
-To install Tekton Pipelines on OpenShift, you must first apply the `anyuid` security
-context constraint to the `tekton-pipelines-controller` service account. This is required to run the webhook Pod.
-See
-[Security Context Constraints](https://docs.openshift.com/container-platform/4.3/authentication/managing-security-context-constraints.html)
-for more information.
+要在OpenShift集群中安装Tekton，你首先需要应用`anyuid`安全上下文到`tekton-pipelines-controller`服务账户。这是运行webhook Pod的必须条件。
+参考
+[安全上下文约束](https://docs.openshift.com/container-platform/4.3/authentication/managing-security-context-constraints.html)
+查看更多信息。
 
-1. Log on as a user with `cluster-admin` privileges. The following example
-   uses the default `system:admin` user:
+1. 以`cluster-admin`权限登录，以下使用默认的`system:admin` 用户:
 
    ```bash
    # For MiniShift: oc login -u admin:admin
    oc login -u system:admin
    ```
 
-1. Set up the namespace (project) and configure the service account:
+1. 设置命令空间（项目）以及配置其服务账户:
 
    ```bash
    oc new-project tekton-pipelines
    oc adm policy add-scc-to-user anyuid -z tekton-pipelines-controller
    ```
-1. Install Tekton Pipelines:
+1. 安装Tekton管道:
 
    ```bash
    oc apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.notags.yaml
    ```
-   See the
-   [OpenShift CLI documentation](https://docs.openshift.com/container-platform/4.3/cli_reference/openshift_cli/getting-started-cli.html)
-   for more information on the `oc` command.
+   参考
+   [OpenShift命令行文档](https://docs.openshift.com/container-platform/4.3/cli_reference/openshift_cli/getting-started-cli.html)
+   查看有关 `oc` 命令的说明.
 
-1. Monitor the installation using the following command until all components show a `Running` status:
+1. 使用以下命令查看安装进度，直到所有组件都显示为`运行`状态:
 
    ```bash
    oc get pods --namespace tekton-pipelines --watch
    ```
 
-   **Note:** Hit CTRL + C to stop monitoring.
+   **注意:** 通过 CTRL + C 停止监控.
 
-Congratulations! You have successfully installed Tekton Pipelines on your OpenShift environment. Next, see the following topics:
+恭喜! 你已经成功地在OpenShift集群中安装了Tekton管道。接下来，你可参考以下主题:
 
-* [Configuring artifact storage](#configuring-artifact-storage) to set up artifact storage for Tekton Pipelines.
-* [Customizing basic execution parameters](#customizing-basic-execution-parameters) if you need to customize your service account, timeout, or Pod template values.
+* [配置物料存储](#配置物料存储)通过此节了解如何为Tekton配置物料存储.
+* [自定义基础执行参数](#自定义基础执行参数) 如果你需要自定义你的服务账户，超时时间或Pod模板值的话，请参考此节内容.
 
 If you want to run OpenShift 4.x on your laptop (or desktop), you
 should take a look at [Red Hat CodeReady Containers](https://github.com/code-ready/crc).
 
-## Configuring artifact storage
+## 配置物料存储
 
-`Tasks` in Tekton Pipelines need to ingest inputs from and store outputs to one or more common locations.
- You can use one of the following solutions to set up resource storage for Tekton Pipelines:
+Tekton管道中的`Tasks`需要从一个或多个位置中获取输入或存储输出。
+ 你可以使用以下方式来配置Tekton管道所需的存储资源:
 
-  * [A persistent volume](#configuring-a-persistent-volume)
-  * [A cloud storage bucket](#configuring-a-cloud-storage-bucket)
+  * [辞旧话卷](#configuring-a-persistent-volume)
+  * [云存储](#configuring-a-cloud-storage-bucket)
 
-**Note:** Inputs and output locations for `Tasks` are defined via [`PipelineResources`](https://github.com/tektoncd/pipeline/blob/master/docs/resources.md).
+**注意:** `Tasks`所需的输入与输出位置可通过 [`PipelineResources`](https://github.com/tektoncd/pipeline/blob/master/docs/resources.md)来定义。
 
-Either option provides the same functionality to Tekton Pipelines. Choose the option that
-best suits your business needs. For example:
+对于Tekton管道来说，两种选项具有相同的功能，你可以按照你的实际业务需要进行选择。例如:
 
- - In some environments, creating a persistent volume could be slower than transferring files to/from a cloud storage bucket.
- - If the cluster is running in multiple zones, accessing a persistent volume could be unreliable.
+ - 在一些环境中，创建一个持久化卷可能比传输文件到云存储更慢。
+ - 如果集群运行在多个可用区，访问持久化卷可能就不合适了。
 
-**Note:** To customize the names of the `ConfigMaps` for artifact persistence (e.g. to avoid collisions with other services), rename the `ConfigMap` and update the env value defined [controller.yaml](https://github.com/tektoncd/pipeline/blob/e153c6f2436130e95f6e814b4a792fb2599c57ef/config/controller.yaml#L66-L75).
+**注意:** 要自定义持久化卷所用`ConfigMaps`的名称 (例如避免与其他服务冲突的情况), 重命名你的 `ConfigMap` 名称并更新[controller.yaml](https://github.com/tektoncd/pipeline/blob/e153c6f2436130e95f6e814b4a792fb2599c57ef/config/controller.yaml#L66-L75)中引用的值.
 
-### Configuring a persistent volume
+### 配置持久化卷
 
-To configure a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), use a `ConfigMap` with the name `config-artifact-pvc` and the following attributes:
+要配置 [持久化卷](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), 通过使用一个名称为 `config-artifact-pvc`的`ConfigMap` 然后配置以下属性:
 
-- `size`: the size of the volume. Default is 5GiB.
-- `storageClassName`: the [storage class](https://kubernetes.io/docs/concepts/storage/storage-classes/) of the volume. The possible values depend on the cluster configuration and the underlying infrastructure provider. Default is the default storage class.
+- `size`: 卷的大小. 默认为5GiB.
+- `storageClassName`: 持久化卷所使用的[存储类](https://kubernetes.io/docs/concepts/storage/storage-classes/)名称。默认为默认存储类。
 
-### Configuring a cloud storage bucket
+### 配置云存储
 
-To configure either an [S3 bucket](https://aws.amazon.com/s3/) or a [GCS bucket](https://cloud.google.com/storage/),
-use a `ConfigMap` with the name `config-artifact-bucket` and the following attributes:
+要配置 [S3 桶](https://aws.amazon.com/s3/)或者 [GCS 桶](https://cloud.google.com/storage/),
+使用一个名称为`config-artifact-bucket`的`ConfigMap`然后配置以下属性:
 
-- `location` - the address of the bucket, for example `gs://mybucket` or `s3://mybucket`.
-- `bucket.service.account.secret.name` - the name of the secret containing the credentials for the service account with access to the bucket.
-- `bucket.service.account.secret.key` - the key in the secret with the required
-  service account JSON file.
-- `bucket.service.account.field.name` - the name of the environment variable to use when specifying the
-  secret path. Defaults to `GOOGLE_APPLICATION_CREDENTIALS`. Set to `BOTO_CONFIG` if using S3 instead of GCS.
+- `location` - 桶的位置, 例如 `gs://mybucket` 或者 `s3://mybucket`.
+- `bucket.service.account.secret.name` - 服务账号使用的包含可访问桶的凭证的密文名称。
+- `bucket.service.account.secret.key` - 服务账号所需JSON文件的键名称。
+- `bucket.service.account.field.name` - 当指定密文路径时，所使用的环境变量名称。默认为 `GOOGLE_APPLICATION_CREDENTIALS`. 如果使用S3，需设置为`BOTO_CONFIG`.
 
-**Important:** Configure your bucket's retention policy to delete all files after your `Tasks` finish running.
+**重要:** 配置你的桶的回收策略为在运行`Tasks`后删除所有文件。
 
-**Note:** You can only use an S3 bucket located in the `us-east-1` region. This is a limitation of [`gsutil`](https://cloud.google.com/storage/docs/gsutil) running a `boto` configuration behind the scenes to access the S3 bucket.
+**注意:** 你只能使用 `us-east-1` 可用区的S3桶. 这是[`gsutil`](https://cloud.google.com/storage/docs/gsutil) 的限制.
 
 
-#### Example configuration for an S3 bucket
+#### S3 桶配置示例
 
-Below is an example configuration that uses an S3 bucket:
+以下为使用S3桶的示例:
 
 ```yaml
 apiVersion: v1
@@ -197,9 +188,9 @@ data:
   bucket.service.account.field.name: BOTO_CONFIG
 ```
 
-#### Example configuration for a GCS bucket
+#### GCS桶示例
 
-Below is an example configuration that uses a GCS bucket:
+以下为使用GCS桶的示例:
 
 ```yaml
 apiVersion: v1
@@ -235,17 +226,17 @@ data:
   bucket.service.account.field.name: GOOGLE_APPLICATION_CREDENTIALS
 ```
 
-## Customizing basic execution parameters
+## 自定义基础执行参数
 
-You can specify your own values that replace the default service account (`ServiceAccount`), timeout (`Timeout`), and Pod template (`PodTemplate`) values used by Tekton Pipelines in `TaskRun` and `PipelineRun` definitions. To do so, modify the ConfigMap `config-defaults` with your desired values.
+你可以自定义Tekton管道运行`TaskRun` 及 `PipelineRun`时所用的服务账号 (`ServiceAccount`), 超时时间 (`Timeout`), 以及Pod模板 (`PodTemplate`) , 要自定义这些值，可直接修改配置文件 `config-defaults` 。
 
-The example below customizes the following:
+以下示例将自定义:
 
-- the default service account from `default` to `tekton`.
-- the default timeout from 60 minutes to 20 minutes.
-- the default `app.kubernetes.io/managed-by` label is applied to all Pods created to execute `TaskRuns`.
-- the default Pod template to include a node selector to select the node where the Pod will be scheduled by default.
-  For more information, see [`PodTemplate` in `TaskRuns`](./taskruns.md#pod-template) or [`PodTemplate` in `PipelineRuns`](./pipelineruns.md#pod-template).
+- 默认服务账号从`default` 修改为 `tekton`.
+- 默认超时时间从60 分钟修改为 20 分钟.
+- 为所有由执行`TaskRuns`的Pod附加统一的 `app.kubernetes.io/managed-by` 标签.
+- 为默认的Pod模板添加一个节点选择器.
+  更多信息, 请参考 [`TaskRuns`中的`PodTemplate`](./taskruns.md#pod-template) 或者 [`PipelineRuns`中的`PodTemplate`](./pipelineruns.md#pod-template).
 
 ```yaml
 apiVersion: v1
@@ -261,24 +252,19 @@ data:
   default-managed-by-label-value: "my-tekton-installation"
 ```
 
-**Note:** The `_example` key in the provided [config-defaults.yaml](./../config/config-defaults.yaml)
-file lists the keys you can customize along with their default values.
+**注意:**  由[config-defaults.yaml](./../config/config-defaults.yaml)提供的`_example`键
+的内容示例都可由你来自定义。
 
-### Customizing the Pipelines Controller behavior
+### 自定义管道控制器行为
 
-To customize the behavior of the Pipelines Controller, modify the ConfigMap `feature-flags` as follows:
+要自定义管道控制器的行为，可修改配置文件 `feature-flags` :
 
-- `disable-home-env-overwrite` - set this flag to `true` to prevent Tekton
-from overriding the `$HOME` environment variable for the containers executing your `Steps`.
-The default is `false`. For more information, see the [associated issue](https://github.com/tektoncd/pipeline/issues/2013).
+- `disable-home-env-overwrite` - 设置此标记为`true`，如果你想阻止Tekton执行步骤时覆盖你的$HOME环境变量, 默认为`false`, 更多信息请参考 [相关issue](https://github.com/tektoncd/pipeline/issues/2013).
 
-- `disable-working-directory-overwrite` - set this flag to `true` to prevent Tekton
-from overriding the working directory for the containers executing your `Steps`.
-The default value is `false`, which causes Tekton to override the working directory
-for each `Step` that does not have its working directory explicitly set with `/workspace`.
-For more information, see the [associated issue](https://github.com/tektoncd/pipeline/issues/1836).
+- `disable-working-directory-overwrite` - 设置此标记为`true`，如果你想阻止Tekton执行步骤时覆盖你的工作区目录，默认为`false`，这将允许Tekton在执行每一个步骤时将工作目录设置为 `/workspace`.
+更多信息请参考 [相关issue](https://github.com/tektoncd/pipeline/issues/1836).
 
-For example:
+例如:
 
 ```yaml
 apiVersion: v1
@@ -290,17 +276,14 @@ data:
   disable-working-directory-overwrite: "true" # Tekton will not override the working directory for individual Steps.
 ```
 
-## Creating a custom release of Tekton Pipelines
+## 创建自定义Tekton管道版本
 
-You can create a custom release of Tekton Pipelines by following and customizing the steps in [Creating an official release](https://github.com/tektoncd/pipeline/blob/master/tekton/README.md#create-an-official-release). For example, you might want to customize the container images built and used by Tekton Pipelines.
+你可以创建Tekton管道的自定义发布版本，参考以下步骤 [创建一个正式发布](https://github.com/tektoncd/pipeline/blob/master/tekton/README.md#create-an-official-release). 例如, 你可能需要自定义Tekton管道所使用的容器镜像。
 
-## Next steps
+## 下一步
 
-To get started with Tekton Pipelines, see the [Tekton Pipelines Tutorial](./tutorial.md) and take a look at our [examples](https://github.com/tektoncd/pipeline/tree/master/examples).
+开始使用Tekton管道, 参考[Tekton管道手册](./tutorial.md) 以及查看我们的 [示例](https://github.com/tektoncd/pipeline/tree/master/examples).
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
