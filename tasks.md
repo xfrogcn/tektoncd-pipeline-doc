@@ -6,80 +6,75 @@ weight: 1
 -->
 # Tasks
 
-- [Overview](#overview)
-- [Configuring a `Task`](#configuring-a-task)
-  - [`Task` vs. `ClusterTask`](#task-vs-clustertask)
-  - [Defining `Steps`](#defining-steps)
-    - [Reserved directories](#reserved-directories)
-    - [Running scripts within `Steps`](#running-scripts-within-steps)
-  - [Specifying `Parameters`](#specifying-parameters)
-  - [Specifying `Resources`](#specifying-resources)
-  - [Specifying `Workspaces`](#specifying-workspaces)
-  - [Storing execution results](#storing-execution-results)
-  - [Specifying `Volumes`](#specifying-volumes)
-  - [Specifying a `Step` template](#specifying-a-step-template)
-  - [Specifying `Sidecars`](#specifying-sidecars)
-  - [Adding a description](#adding-a-description)
-  - [Using variable substitution](#using-variable-substitution)
-    - [Substituting parameters and resources](#substituting-parameters-and-resources)
-    - [Substituting `Array` parameters](#substituting-array-parameters)
-    - [Substituting `Workspace` paths](#substituting-workspace-paths)
-    - [Substituting `Volume` names and types](#substituting-volume-names-and-types)
-- [Code examples](#code-examples)
-  - [Building and pushing a Docker image](#building-and-pushing-a-docker-image)
-  - [Mounting multiple `Volumes`](#mounting-multiple-volumes)
-  - [Mounting a `ConfigMap` as a `Volume` source](#mounting-a-configmap-as-a-volume-source)
-  - [Using a `Secret` as an environment source](#using-a-secret-as-an-environment-source)
-  - [Using a `Sidecar` in a `Task`](#using-a-sidecar-in-a-task)
-- [Debugging](#debugging)
-  - [Inspecting the file structure](#inspecting-the-file-structure)
-  - [Inspecting the `Pod`](#inspecting-the-pod)
+- [概览](#概览)
+- [配置`Task`](#配置Task)
+  - [对比`Task` 与 `ClusterTask`](#对比Task与ClusterTask)
+  - [定义 `Steps`](#定义-Steps)
+    - [保留目录](#保留目录)
+    - [在`Steps`中运行脚本](#在Steps中运行脚本)
+  - [详述 `Parameters`](#详述-Parameters)
+  - [详述 `Resources`](#详述-Resources)
+  - [详述 `Workspaces`](#详述-Workspaces)
+  - [存储执行结果](#存储执行结果)
+  - [详述 `Volumes`](#详述-Volumes)
+  - [详述  `Step` 模板](#详述-Step-模板)
+  - [详述 `Sidecars`](#详述-Sidecars)
+  - [添加描述](#添加描述)
+  - [使用便利替换](#使用便利替换)
+    - [替换参数与资源](#替换参数与资源)
+    - [替换 `Array` 参数](#替换-Array-参数)
+    - [替换 `Workspace` 路径](#替换-Workspace-路径)
+    - [替换 `Volume` 名称和类型](#替换-Volume-名称和类型)
+- [代码示例](#code-examples)
+  - [构建和推送Docker镜像](#构建和推送Docker镜像)
+  - [挂载多个`Volumes`](#挂载多个Volumes)
+  - [挂载`ConfigMap` 为`Volume` 资源](#挂载ConfigMap-为Volume-资源)
+  - [使用  `Secret` 作为环境变量源](#使用-Secret-作为环境变量源)
+  - [在`Task`中使用  `Sidecar`](#在Task中使用-Sidecar)
+- [调试](#调试)
+  - [审视文件结构](#审视文件结构)
+  - [审视`Pod`](#审视Pod)
 
-## Overview
+## 概览
 
-A `Task` is a collection of `Steps` that you
-define and arrange in a specific order of execution as part of your continuous integration flow.
-A `Task` executes as a Pod on your Kubernetes cluster. A `Task` is available within a specific
-namespace, while a `ClusterTask` is available across the entire cluster.
+`Task`作为持续集成工作流的一部分，由一些列按特定顺序执行的步骤组成。`Task`在指定的命名空间中有效，`ClusterTask`在集群全局有效。
 
-A `Task` declaration includes the following elements:
+`Task`由以下元素组成:
 
-- [Parameters](#specifying-parameters)
-- [Resources](#specifying-resources)
-- [Steps](#defining-steps)
-- [Workspaces](#specifying-workspaces)
-- [Results](#storing-execution-results)
+- [参数(Parameters)](#详述-Parameters)
+- [资源(Resources)](#详述-Resources)
+- [步骤(Steps)](#定义-Steps)
+- [工作区(Workspaces)](#详述-Workspaces)
+- [结果(Results)](#存储执行结果)
 
-## Configuring a `Task`
+## 配置`Task`
 
-A `Task` definition supports the following fields:
+`Task`定义支持以下字段:
 
-- Required:
-  - [`apiVersion`][kubernetes-overview] - Specifies the API version. For example,
+- 必须字段:
+  - [`apiVersion`][kubernetes-overview] - 指定API版本. 例如,
     `tekton.dev/v1beta1`.
-  - [`kind`][kubernetes-overview] - Identifies this resource object as a `Task` object.
-  - [`metadata`][kubernetes-overview] - Specifies metadata that uniquely identifies the
-    `Task` resource object. For example, a `name`.
-  - [`spec`][kubernetes-overview] - Specifies the configuration information for
-    this `Task` resource object.
-  - [`steps`](#defining-steps) - Specifies one or more container images to run in the `Task`.
-- Optional:
-  - [`description`](#adding-a-description) - An informative description of the `Task`.
-  - [`params`](#specifying-parameters) - Specifies execution parameters for the `Task`.
-  - [`resources`](#specifying-resources) - **alpha only** Specifies
-    [`PipelineResources`](resources.md) needed or created by your`Task`.
-    - [`inputs`](#specifying-resources) - Specifies the resources ingested by the `Task`.
-    - [`outputs`](#specifying-resources) - Specifies the resources produced by the `Task`.
-  - [`workspaces`](#specifying-workspaces) - Specifies paths to volumes required by the `Task`.
-  - [`results`](#storing-execution-results) - Specifies the file to which the `Tasks` writes its execution results.
-  - [`volumes`](#specifying-volumes) - Specifies one or more volumes that will be available available to the `Steps` in the `Task`.
-  - [`stepTemplate`](#specifying-a-step-template) - Specifies a `Container` step definition to use as the basis for all `Steps` in the `Task`.
-  - [`sidecars`](#specifying-sidecars) - Specifies `Sidecar` containers to run alongside the `Steps` in the `Task.
+  - [`kind`][kubernetes-overview] - 定义此资源对象为`Task`对象。
+  - [`metadata`][kubernetes-overview] - 指定`Task`资源对象的元数据，例如，名称(`name`).
+  - [`spec`][kubernetes-overview] - 指定此`Task`的配置信息.
+  - [`steps`](#defining-steps) - 指定一个或多个容器镜像来运行`Task`.
+- 可选字段:
+  - [`description`](#adding-a-description) - 有关该`Task`资源对象的描述.
+  - [`params`](#specifying-parameters) - 指定执行`Task`所需参数.
+  - [`resources`](#specifying-resources) - **alpha版本** 指定所需的或由`Task`创建的
+    [`PipelineResources`](resources.md) .
+    - [`inputs`](#specifying-resources) - 指定由`Task`引入的资源.
+    - [`outputs`](#specifying-resources) - 指定由`Task`产生的资源.
+  - [`workspaces`](#specifying-workspaces) - 指定`Task`所需的卷路径.
+  - [`results`](#storing-execution-results) - 指定`Task`写入其执行结果的文件.
+  - [`volumes`](#specifying-volumes) - 指定一个或多个在`Task`中的`Steps`步骤中有效的卷.
+  - [`stepTemplate`](#specifying-a-step-template) - 指定一个`Container`步骤定义，它作为`Task`中所有`Steps`使用的基础容器.
+  - [`sidecars`](#specifying-sidecars) - 指定与`Task`中`Step`一起运行的边车`Sidecar`容器.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
 
-The non-functional example below demonstrates the use of most of the above-mentioned fields:
+以下非功能性示例Demo使用了上述多个字段:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -117,16 +112,15 @@ spec:
       emptyDir: {}
 ```
 
-### `Task` vs. `ClusterTask`
+### 对比`Task`与`ClusterTask`
 
-A `ClusterTask` is a `Task` scoped to the entire cluster instead of a single namespace.
-A `ClusterTask` behaves identically to a `Task` and therefore everything in this document
-applies to both.
+`ClusterTask`是范围为整个集群的`Task`, 而`Task`的范围为单个命名空间。
+`ClusterTask`行为与`Task`完全一致，本文档中所有内容都适合于这两种任务。
 
-**Note:** When using a `ClusterTask`, you must explicitly set the `kind` sub-field in the `taskRef` field to `ClusterTask`.
-          If not specified, the `kind` sub-field defaults to `Task.`
+**注意:** 当你使用`ClusterTask`时, 你必须将`taskRef`中的`kind`子字段设置为`ClusterTask`.
+如果不特别指定，`kind`默认为`Task`
 
-Below is an example of a Pipeline declaration that uses a `ClusterTask`:
+以下为在Pipeline中使用`ClusterTask`的示例:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -143,56 +137,45 @@ spec:
       params: ....
 ```
 
-### Defining `Steps`
+### 定义 `Steps`
 
-A `Step` is a reference to a container image that executes a specific tool on a
-specific input and produces a specific output. To add `Steps` to a `Task` you
-define a `steps` field (required) containing a list of desired `Steps`. The order in
-which the `Steps` appear in this list is the order in which they will execute.
+`Step`通过引用一个容器镜像通过输入资源执行特定的工具并产生特定的输出。要添加步骤`Steps`到`Task`你需要定义`steps`字段（必须）并包含一些列的步骤`Steps`，在`Steps`中呈现的顺序即为执行的顺序。
 
-The following requirements apply to each container image referenced in a `steps` field:
+`steps`字段中的容器镜像必须满足以下要求：
 
-- The container image must abide by the [container contract](./container-contract.md).
-- Each container image runs to completion or until the first failure occurs.
-- The CPU, memory, and ephemeral storage resource requests will be set to zero, or, if
-  specified, the minimums set through `LimitRanges` in that `Namespace`,
-  if the container image does not have the largest resource request out of all
-  container images in the `Task.` This ensures that the Pod that executes the `Task`
-  only requests enough resources to run a single container image in the `Task` rather
-  than hoard resources for all container images in the `Task` at once.
+- 容器镜像需要遵循[容器契约](./container-contract.md).
+- 每一个容器运行完成或者直到发生了首次错误.
+- CPU,内存以及临时存储资源请求应该设置为0，或者，如果指定，最小值通过`Namespace`的`LimitRanges`设置，如果容器镜像无法获得`Task`中所有容器镜像的最大资源请求. 这确保了执行`Task`的Pod只会请求运行一个单独镜像所需的资源，而不是一次申请运行所有容器镜像所需的资源。
 
-#### Reserved directories
+#### 保留目录
 
-There are several directories that all `Tasks` run by Tekton will treat as special
+以下为Tekton运行所有`Tasks`所保留的特殊目录：
 
-* `/workspace` - This directory is where [resources](#resources) and [workspaces](#workspaces)
-  are mounted. Paths to these are available to `Task` authors via [variable substitution](variables.md)
-* `/tekton` - This directory is used for Tekton specific functionality:
-    * `/tekton/results` is where [results](#results) are written to.
-      The path is available to `Task` authors via [`$(results.name.path)`](variables.md))
-    * There are other subfolders which are [implementation details of Tekton](developers/README.md#reserved-directories)
-      and **users should not rely on their specific behavior as it may change in the future**
+* `/workspace` - 此目录是[资源](#resources) 以及 [工作区](#workspaces)
+  的挂载位置. 这些路径可在`Task`中通过 [变量替换](variables.md)来使用
+* `/tekton` - 这个目录用于Tekton的特定功能:
+    * `/tekton/results` 存储任务[结果](#results) 的位置.
+      这些路径可在`Task`中通过 [变量替换](variables.md)来使用
+    * 还有一些与[Tekton内部实现细节](developers/README.md#reserved-directories)相关的子目录
+       **用于不应该依赖于这些目录结果，因为它们可能在未来被改变**
 
-#### Running scripts within `Steps`
+#### 在`Steps`中运行脚本
 
-A step can specify a `script` field, which contains the body of a script. That script is
-invoked as if it were stored inside the container image, and any `args` are passed directly
-to it.
+步骤可以指定一个`script`字段，它可以包含一段脚本。这个脚本可以直接调用，就像他在容器镜像中一样，并且可以直接传递任何参数.
 
-**Note:** If the `script` field is present, the step cannot also contain a `command` field.
+**注意:** 如果设置了`script`字段, 步骤就不能再设置`command`字段.
 
-Scripts that do not start with a [shebang](https://en.wikipedia.org/wiki/Shebang_(Unix))
-line will have the following default preamble prepended:
+不是以[shebang](https://en.wikipedia.org/wiki/Shebang_(Unix))
+行开始的脚本将使用以下默认前缀:
 
 ```bash
 #!/bin/sh
 set -xe
 ```
 
-You can override this default preamble by prepending a shebang that specifies the desired parser.
-This parser must be present within that `Step's` container image.
+你可以覆盖此默认前缀来指定特定的解析，此解析器必须包含在`Step's`容器镜像中.
 
-The example below executes a Bash script:
+以下示例执行一段基础脚本:
 
 ```yaml
 steps:
@@ -201,8 +184,7 @@ steps:
     #!/usr/bin/env bash
     echo "Hello from Bash!"
 ```
-
-The example below executes a Python script:
+以下示例执行一段Python脚本:
 
 ```yaml
 steps:
@@ -212,7 +194,7 @@ steps:
     print("Hello from Python!")
 ```
 
-The example below executes a Node script:
+以下示例执行一段Node脚本:
 
 ```yaml
 steps:
@@ -222,7 +204,7 @@ steps:
     console.log("Hello from Node!")
 ```
 
-You can execute scripts directly in the workspace:
+你可以直接执行工作区中的脚本:
 
 ```yaml
 steps:
@@ -232,7 +214,7 @@ steps:
     /workspace/my-script.sh  # provided by an input resource
 ```
 
-You can also execute scripts within the container image:
+你也可以执行容器镜像中的脚本:
 
 ```yaml
 steps:
@@ -242,26 +224,23 @@ steps:
     /bin/my-binary
 ```
 
-### Specifying `Parameters`
+### 详述 `Parameters`
 
-You can specify parameters, such as compilation flags or artifact names, that you want to supply to the `Task` at execution time.
- `Parameters` are passed to the `Task` from its corresponding `TaskRun`.
+你可以指定参数，例如编译参数或者工件名称，然后再`Task`执行时被使用.
+`Parameters`通过`TaskRun`传递给所关联的`Task`.
 
-Parameter names:
-- Must only contain alphanumeric characters, hyphens (`-`), and underscores (`_`).
-- Must begin with a letter or an underscore (`_`).
+参数名称:
+- 只能由数字、字母、连字符 (`-`), 以及下划线 (`_`)组成.
+- 必须由字母或者下划线(`_`)开始.
 
-For example, `fooIs-Bar_` is a valid parameter name, but `barIsBa$` or `0banana` are not.
+例如`fooIs-Bar_`是一个有效的名称，但`barIsBa$` 或 `0banana` 就是无效的.
 
-Each declared parameter has a `type` field, which can be set to either `array` or `string`. `array` is useful in cases where the number
-of compiliation flags being supplied to a task varies throughout the `Task's` execution. If not specified, the `type` field defaults to
-`string`. When the actual parameter value is supplied, its parsed type is validated against the `type` field.
+定义的每一个参数都具有`type`字段，它可设置为`array`或者`string`.`array`主要用于传递`Task's`的执行参数，如果没有指定，`type`默认为`string`. 当指定了参数实际值时，将解析为`type`字段指定的类型.
 
-The following example illustrates the use of `Parameters` in a `Task`. The `Task` declares two input parameters named `flags`
-(of type `array`) and `someURL` (of type `string`), and uses them in the `steps.args` list. You can expand parameters of type `array`
-inside an existing array using the star operator. In this example, `flags` contains the star operator: `$(params.flags[*])`.
+以下示例阐述了在`Task`中使用`Parameters`，`Task`定义了两个名称为`flags`（类型为`array`)及`someURL`(类型为`string`)的参数，然后在`steps.args`列表中使用，你可以通过星号操作符来提取`array`中所有参数，在此例中，`flags`包含星号操作`$(params.flags[*])`.
 
-**Note:** Input parameter values can be used as variables throughout the `Task` by using [variable substitution](#using-variable-substitution).
+
+**注意:** 输入参数可以在`Task`中作为变量来使用，通过[变量替换]](#using-variable-substitution)的方式.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -280,7 +259,7 @@ spec:
       args: ["build", "$(params.flags[*])", "url=$(params.someURL)"]
 ```
 
-The following `TaskRun` supplies a dynamic number of strings within the `flags` parameter:
+下列`TaskRun`提供了参数的具体指:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -301,14 +280,11 @@ spec:
       value: "http://google.com"
 ```
 
-### Specifying `Resources`
+### 详述 `Resources`
 
-A `Task` definition can specify input and output resources supplied by
-a `[`PipelineResources`](resources.md#using-resources) entity.
+`Task`中可使用由[`PipelineResources`](resources.md#using-resources)定义的输入或输出资源.
 
-Use the `input` field to supply your `Task` with the context and/or data it needs to execute.
-If the output of your `Task` is also the input of the next `Task` that executes, you must
-make that data available to that `Task` at `/workspace/output/resource_name/`. For example:
+使用`input`字段提供执行`Task`所需的上下文或者/以及其数据. 例如:
 
 ```yaml
 resources:
@@ -325,18 +301,9 @@ steps:
         value: "world"
 ```
 
-**Note**: If the `Task` relies on output resource functionality then the
-containers in the `Task's` `steps` field cannot mount anything in the path
-`/workspace/output`.
+**注意**: 如果`Task`依赖于输出资源功能，那么在`Task's` `steps`字段中的容器不可挂载路径`/workspace/output`.
 
-In the following example, the `tar-artifact` resource is used as both input and
-output. Thus, the input resource is copied into the `customworkspace` directory,
-as specified in the `targetPath` field. The `untar` `Step` extracts the tarball
-into the `tar-scratch-space` directory. The `edit-tar` `Step` adds a new file,
-and the `tar-it-up` `Step` creates a new tarball and places it in the
-`/workspace/customworkspace/` directory. When the `Task` completes execution,
-it places the resulting tarball in the `/workspace/customworkspace` directory
-and uploads it to the bucket defined in the `tar-artifact` field.
+以下示例中`tar-artifact`资源同时被用于输出以及输出。因此，输入资源通过指定`targetPath`字段，被拷贝到了`customworkspace`目录，`untar` 步骤解压文件到`tar-scratch-space`目录，`edit-tar`步骤添加一个新文件，然后`tar-it-up`步骤创建新的压缩文件并将其放到`/workspace/customworkspace/`目录。当`Task`执行完成，它将结果放于`/workspace/customworkspace`目录，并上传它到由`tar-artifact`字段定义的桶中.
 
 ```yaml
 resources:
@@ -360,10 +327,9 @@ steps:
    args: ['-c', 'cd /workspace/tar-scratch-space/ && tar -cvf /workspace/customworkspace/rules_docker-master.tar rules_docker-master']
 ```
 
-### Specifying `Workspaces`
+### 详述 `Workspaces`
 
-`Workspaces`[workspaces.md#declaring-workspaces-in-tasks] allow you to specify
-one or more volumes that your `Task` requires during execution. For example:
+`工作区`[workspaces.md#declaring-workspaces-in-tasks]允许你指定一个或多个在`Task`执行时所需的卷，例如:
 
 ```yaml
 spec:
@@ -380,17 +346,14 @@ spec:
     mountPath: /custom/path/relative/to/root
 ```
 
-For more information, see [Using `Workspaces` in `Tasks`](workspaces.md#using-workspaces-in-tasks)
-and the [`Workspaces` in a `TaskRun`](../examples/v1beta1/taskruns/workspace.yaml) example YAML file.
+有关更多详情, 请参考 [在`Tasks`中使用`工作区`](workspaces.md#using-workspaces-in-tasks)
+以及[`TaskRun`中的`工作区`](../examples/v1beta1/taskruns/workspace.yaml) 示例YAML文件.
 
-### Storing execution results
+### 存储执行结果
 
-Use the `results` field to specify one or more files in which the `Task` stores its execution results. These files are
-stored in the `/tekton/results` directory. This directory is created automatically at execution time if at least one file
-is specified in the `results` field. To specify a file, provide its `name` and `description`.
+使用`results`字段来指定一个或多个文件来存储`Task`的执行结果，这些文件存储在`/tekton/results`目录中，如果在results中至少有一个文件，这个目录将会被自动创建，要指定一个文件，提供其`name`和`description`字段.
 
-In the example below, the `Task` specifies two files in the `results` field:
-`current-date-unix-timestamp` and `current-date-human-readable`.
+在以下示例中，`Task`在`results`中指定了两个文件：`current-date-unix-timestamp` 和 `current-date-human-readable`.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -419,43 +382,28 @@ spec:
         date | tee /tekton/results/current-date-human-readable
 ```
 
-**Note:** The maximum size of a `Task's` results is limited by the container termination log feature of Kubernetes,
-as results are passed back to the controller via this mechanism. At present, the limit is
-["2048 bytes or 80 lines, whichever is smaller."](https://kubernetes.io/docs/tasks/debug-application-cluster/determine-reason-pod-failure/#customizing-the-termination-message).
-Results are written to the termination log encoded as JSON objects and Tekton uses those objects
-to pass additional information to the controller. As such, `Task` results are best suited for holding
-small amounts of data, such as commit SHAs, branch names, ephemeral space names, and so on.
+**注意:** `Task's`结果的最大尺寸的限制由Kubernetes容器终端日志功能限制, 结果返回到controller的过程通过此机制完成，此限制为["2048 字节或 80 行"](https://kubernetes.io/docs/tasks/debug-application-cluster/determine-reason-pod-failure/#customizing-the-termination-message).
+写到终端的日志编码为JSON对象，Tekton使用这些对象传递附加信息到控制器。由此，`Task`结果对于保持小量数据最实用，如提交SHAs，分支名称，临时空间名称等.
 
-If your `Task` writes a large number of small results, you can work around this limitation
-by writing each result from a separate `Step` so that each `Step` has its own termination log.
-However, for results larger than a kilobyte, use a [`Workspace`](#specifying-workspaces) to
-shuttle data between `Tasks` within a `Pipeline`.
+如果你的`Task`写入大量的小结果，你可以通过分割结果到不同的步骤来绕过此限制，但是如果结果大于1Kb，可以使用[`工作区`](#specifying-workspaces) 来在`Pipeline` `Tasks`之间传递数据.
 
-### Specifying `Volumes`
+### 详述 `Volumes`
 
-Specifies one or more [`Volumes`](https://kubernetes.io/docs/concepts/storage/volumes/) that the `Steps` in your
-`Task` require to execute in addition to volumes that are implicitly created for input and output resources.
+除了由输入或输出资源隐式创建的卷外，你还可为`Task`步骤指定一个或多个执行时所需的[`卷`](https://kubernetes.io/docs/concepts/storage/volumes/).
 
-For example, you can use `Volumes` to do the following:
+例如，你可以使用`Volumes`做以下事情:
 
-- [Mount a Kubernetes `Secret`](auth.md).
-- Create an `emptyDir` persistent `Volume` that caches data across multiple `Steps`.
-- Mount a [Kubernetes `ConfigMap`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
-  as `Volume` source.
-- Mount a host's Docker socket to use a `Dockerfile` for building container images.
-  **Note:** Building a container image on-cluster using `docker build` is **very
-  unsafe** and is mentioned only for the sake of the example. Use [kaniko](https://github.com/GoogleContainerTools/kaniko) instead.
+- [挂载一个Kubernetes`Secret`](auth.md).
+- 创建一个`emptyDir`持久化`卷`来缓存跨步骤的数据.
+- 挂载[Kubernetes `ConfigMap`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/).
+- 挂载宿主Docker socket来构建`Dockerfile`为容器镜像.
+  **注意:** 在集群中通过`docker build`来构建容器镜像是**非常不安全的**, 通常只在示例时使用，你应该使用[kaniko](https://github.com/GoogleContainerTools/kaniko) 来替代.
 
-### Specifying a `Step` template
+### 详述  `Step` 模板
 
-The `stepTemplate` field specifies a [`Container`](https://kubernetes.io/docs/concepts/containers/)
-configuration that will be used as the starting point for all of the `Steps` in your
-`Task`. Individual configurations specified within `Steps` supersede the template wherever
-overlap occurs.
+`stepTemplate`字段指定一个[`容器`](https://kubernetes.io/docs/concepts/containers/)配置，这些配置将对`Task`中的所有步骤有效，在单独的`Steps`中的独立配置将覆盖掉`stepTemplate`配置.
 
-In the example below, the `Task` specifies a `stepTemplate` field with the environment variable
-`FOO` set to `bar`. The first `Step` in the `Task` uses that value for `FOO`, but the second `Step`
-overrides the value set in the template with `baz`.
+在以下示例中，`Task`指定了`stepTemplate`字段，设置环境变量`FOO`为`bar`，在第一个步骤中将使用此值，但第二个步骤中将值覆盖为`baz`.
 
 ```yaml
 stepTemplate:
@@ -474,15 +422,14 @@ steps:
         value: "baz"
 ```
 
-### Specifying `Sidecars`
+### 详述 `Sidecars`
 
-The `sidecars` field specifies a list of [`Containers`](https://kubernetes.io/docs/concepts/containers/)
-to run alongside the `Steps` in your `Task`. You can use `Sidecars` to provide auxiliary functionality, such as
-[Docker in Docker](https://hub.docker.com/_/docker) or running a mock API server that your app can hit during testing.
-`Sidecars` spin up before your `Task` executes and are deleted after the `Task` execution completes.
-For further information, see [`Sidecars` in `TaskRuns`](taskruns.md#sidecars).
+`sidecars`字段指定一系列的[`容器`](https://kubernetes.io/docs/concepts/containers/)
+，这些容器与`Task`中的`Steps`一起运行. 你可以使用`Sidecars`来提供附加的功能，例如[Docker in Docker](https://hub.docker.com/_/docker)或运行一个模拟API服务来执行测试任务.
+`Sidecars`在`Task`执行时保持运行，在`Task`执行完成后被删除.
+想了解更多信息, 请参考 [`TaskRuns`中的`Sidecars`](taskruns.md#sidecars).
 
-In the example below, a `Step` uses a Docker-in-Docker `Sidecar` to build a Docker image:
+在以下示例中，`Step`使用Docker-in-Docker `Sidecar`来构建一个Docker镜像:
 
 ```yaml
 steps:
@@ -517,7 +464,7 @@ volumes:
     emptyDir: {}
 ```
 
-Sidecars, just like `Steps`, can also run scripts:
+与`Steps`类似，Sidecars也可以运行脚本:
 
 ```yaml
 sidecars:
@@ -526,47 +473,40 @@ sidecars:
   script: |
     echo 'Hello from sidecar!'
 ```
-**Note:** Tekton's current `Sidecar` implementation contains a bug.
-Tekton uses a container image named `nop` to terminate `Sidecars`.
-That image is configured by passing a flag to the Tekton controller.
-If the configured `nop` image contains the exact command the `Sidecar`
-was executing before receiving a "stop" signal, the `Sidecar` keeps
-running, eventually causing the `TaskRun` to time out with an error.
-For more information, see [issue 1347](https://github.com/tektoncd/pipeline/issues/1347).
+**注意:** Tekton当前的`Sidecar`实现存在一个bug，Tekton使用一个名称为`nop`的镜像来终止`Sidecars`.此镜像通过传递给Tekton控制器的标记来配置. 如果配置的`nop`的镜像容器包含一个明确命令在接收到"stop"信号之前保持运行，那么`Sidecar`将会保持执行，直到`TaskRun`引发超时错误.
+更多信息, 请参考 [issue 1347](https://github.com/tektoncd/pipeline/issues/1347).
 
-### Adding a description
+### 添加描述
 
-The `description` field is an optional field that allows you to add an informative description to the `Task`.
+`description`字段是可选字段，通过此字段可允许你为`Task`设置描述信息.
 
-### Using variable substitution
+### 使用便利替换
 
-`Tasks` allow you to substitute variable names for the following entities:
+`Task`允许你为以下实体替换变量名称:
 
-- [Parameters and resources]](#substituting-parameters-and-resources)
-- [`Array` parameters](#substituting-array-parameters)
-- [`Workspaces`](#substituting-workspace-paths)
-- [`Volume` names and types](#substituting-volume-names-and-paths)
+- [参数和资源]](#substituting-parameters-and-resources)
+- [`Array` 参数](#substituting-array-parameters)
+- [`工作区`](#substituting-workspace-paths)
+- [`卷` 名称和类型](#substituting-volume-names-and-paths)
 
-Also see the [complete list of variable substitutions for Tasks](./variables.md#variables-available-in-a-task).
+可参考 [任务完整的变量替换列表](./variables.md#variables-available-in-a-task).
 
-#### Substituting parameters and resources
+#### 替换参数与资源
 
-[`params`](#specifying-parameters) and [`resources`](#specifying-resources) attributes can replace
-variable values as follows:
+[`参数`](#specifying-parameters) 和 [`资源`](#specifying-resources) 属性可替换以下变量值:
 
-- To reference a parameter in a `Task`, use the following syntax, where `<name>` is the name of the parameter:
+- 要引用`Task`中的一个参数，使用以下语法，`<name>`为参数名称:
   ```shell
   $(params.<name>)
   ```
-- To access parameter values from resources, see [variable substitution](resources.md#variable-substitution)
+- 要从资源中访问参数，参考[变量替换]](resources.md#variable-substitution)
 
-#### Substituting `Array` parameters
+#### 替换 `Array` 参数
 
-You can expand referenced paramters of type `array` using the star operator. To do so, add the operator (`[*]`)
-to the named parameter to insert the array elements in the spot of the reference string.
+你可以通过使用星号操作符来展开`array`类型的参数，要实现此操作，添加星号操作符 (`[*]`)到参数名称并放置到需要插入数组元素的字符串位置.
 
-For example, given a `params` field with the contents listed below, you can expand
-`command: ["first", "$(params.array-param[*])", "last"]` to `command: ["first", "some", "array", "elements", "last"]`:
+例如，以下`params`字段包含列表，你可以展开
+`command: ["first", "$(params.array-param[*])", "last"]` 到 `command: ["first", "some", "array", "elements", "last"]`:
 
 ```yaml
 params:
@@ -577,9 +517,8 @@ params:
       - "elements"
 ```
 
-You **must** reference parameters of type `array` in a completely isolated string within a larger `string` array.
-Referencing an `array` parameter in any other way will result in an error. For example, if `build-args` is a parameter of
-type `array`, then the following example is an invalid `Step` because the string isn't isolated:
+你 **必须** 引用`array`类型的参数到一个大的`string`数组中完全独立的字符串元素.
+引用`array`参数到任务其他位置将会导致错误，例如，如果`build-args`是一个类型为`array`的参数，以下示例是无效的`step`，因为字符串不是独立的:
 
 ```yaml
  - name: build-step
@@ -587,7 +526,7 @@ type `array`, then the following example is an invalid `Step` because the string
       args: ["build", "additionalArg $(params.build-args[*])"]
 ```
 
-Similarly, referencing `build-args` in a non-`array` field is also invalid:
+同样，引用`build-args`到非`array`字段，也是无效的:
 
 ```yaml
  - name: build-step
@@ -595,7 +534,7 @@ Similarly, referencing `build-args` in a non-`array` field is also invalid:
       args: ["build", "args"]
 ```
 
-A valid reference to the `build-args` parameter is isolated and in an eligible field (`args`, in this case):
+一个有效引用`build-args`参数的方式是在一个合适的字段中独立引用(此例中为`args`):
 
 ```yaml
  - name: build-step
@@ -603,48 +542,44 @@ A valid reference to the `build-args` parameter is isolated and in an eligible f
       args: ["build", "$(params.build-args[*])", "additonalArg"]
 ```
 
-#### Substituting `Workspace` paths
+#### 替换 `Workspace` 路径
 
-You can substitute paths to `Workspaces` specified within a `Task` as follows:
+你可以通过以下方式替换`工作区`路径:
 
 ```yaml
 $(workspaces.myworkspace.path)
 ```
 
-Since the `Volume` name is randomized and only set when the `Task` executes, you can also
-substitute the volume name as follows:
+当`Volume`名称随机化以及智能在`Task`执行时设置时，你可以通过以下方式替换卷名称:
 
 ```yaml
 $(workspaces.myworkspace.volume)
 ```
 
-#### Substituting `Volume` names and types
+#### 替换 `Volume` 名称和类型
 
-You can substitute `Volume` names and [types](https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes)
-by parameterizing them. Tekton supports popular `Volume` types such as `ConfigMap`, `Secret`, and `PersistentVolumeClaim`.
-See this [example](#using-kubernetes-configmap-as-volume-source) to find out how to perform this type of substitution
-in your `Task.`
+你可以替换`Volume`名称和[类型](https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes)
+来参数化它们. Tekton支持常见的`Volume`类型，如`ConfigMap`, `Secret`, 以及 `PersistentVolumeClaim`.
+参考此 [示例](#using-kubernetes-configmap-as-volume-source)来了解详情
 
-## Code examples
+## 代码示例
 
-Study the following code examples to better understand how to configure your `Tasks`:
+学习以下代码示例可更改地了解如何配置你的`Tasks`::
 
-- [Building and pushing a Docker image](#building-and-pushing-a-docker-image)
-- [Mounting multiple `Volumes`](#mounting-multiple-volumes)
-- [Mounting a `ConfigMap` as a `Volume` source](#mounting-a-configmap-as-a-volume-source)
-- [Using a `Secret` as an environment source](#using-a-secret-as-an-environment-source)
-- [Using a `Sidecar` in a `Task`](#using-a-sidecar-in-a-task)
+- [构建和推送Docker镜像](#构建和推送Docker镜像)
+- [挂载多个`Volumes`](#挂载多个Volumes)
+- [挂载`ConfigMap` 为`Volume` 资源](#挂载ConfigMap-为Volume-资源)
+- [使用  `Secret` 作为环境变量源](#使用-Secret-作为环境变量源)
+- [在`Task`中使用  `Sidecar`](#在Task中使用-Sidecar)
 
-_Tip: See the collection of simple
-[examples](https://github.com/tektoncd/pipeline/tree/master/examples) for
-additional code samples._
+_提示: 查看
+[示例](https://github.com/tektoncd/pipeline/tree/master/examples) 来获取更多代码示例._
 
-### Building and pushing a Docker image
+### 构建和推送Docker镜像
 
-The following example `Task` builds and pushes a `Dockerfile`-built image.
+以下示例`Task`构建并推送一个`Dockerfile`构建的镜像.
 
-**Note:** Building a container image using `docker build` on-cluster is **very
-unsafe** and is shown here only as a demonstration. Use [kaniko](https://github.com/GoogleContainerTools/kaniko) instead.
+**注意:** 在集群中通过`docker build`构建镜像是**非常不安全的**，这里只作为演示目的，请使用[kaniko](https://github.com/GoogleContainerTools/kaniko) 来代替.
 
 ```yaml
 spec:
@@ -690,7 +625,7 @@ spec:
         - name: docker-socket
           mountPath: /var/run/docker.sock
 
-  # As an implementation detail, this Task mounts the host's daemon socket.
+  # 作为示例，此Task挂载宿主的docker socket.
   volumes:
     - name: docker-socket
       hostPath:
@@ -698,9 +633,9 @@ spec:
         type: Socket
 ```
 
-#### Mounting multiple `Volumes`
+#### 挂载多个`Volumes`
 
-The example below illustrates mounting multiple `Volumes`:
+以下示例演示挂载多个`卷`:
 
 ```yaml
 spec:
@@ -726,9 +661,9 @@ spec:
       emptyDir: {}
 ```
 
-#### Mounting a `ConfigMap` as a `Volume` source
+#### 挂载`ConfigMap` 为`Volume` 资源
 
-The example below illustrates how to mount a `ConfigMap` to act as a `Volume` source:
+以下示例演示挂载`ConfigMap` 为`Volume`:
 
 ```yaml
 spec:
@@ -754,9 +689,9 @@ spec:
         name: "$(params.CFGNAME)"
 ```
 
-#### Using a `Secret` as an environment source
+#### 使用  `Secret` 作为环境变量源
 
-The example below illustrates how to use a `Secret` as an environment source:
+以下示例演示使用`Secret`作为环境变量源:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -795,9 +730,9 @@ spec:
           key: bot-token
 ```
 
-#### Using a `Sidecar` in a `Task`
+#### 在`Task`中使用  `Sidecar`
 
-The example below illustrates how to use a `Sidecar` in your `Task`:
+以下示例演示在`Task`中使用`Sidecar`:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -823,16 +758,13 @@ spec:
     image: hello-world
 ```
 
-## Debugging
+## 调试
 
-This section describes techniques for debugging the most common issues in `Tasks`.
+此节描述了调试大多数`Tasks`问题的技术.
 
-### Inspecting the file structure
+### 审视文件结构
 
-A common issue when configuring `Tasks` stems from not knowing the location of your data.
-For the most part, files ingested and output by your `Task` live in the `/workspace` directory,
-but the specifics can vary. To inspect the file structure of your `Task`, add a step that outputs
-the name of every file stored in the `/workspace` directory to the build log. For example:
+一个常见的问题是当配置`Tasks`根无法知道你的数据的位置时，在多数情况下输入文件或由你`Task`输出的文件位于`/workspace`目录，但是实际细节可能有所不同，要审视`Task`的文件结构，你可以添加一个步骤输出所有存储在`/workspace`目录的文件列表到构建日志，例如:
 
 ```yaml
 - name: build-and-push-1
@@ -846,7 +778,7 @@ the name of every file stored in the `/workspace` directory to the build log. Fo
     find /workspace
 ```
 
-You can also choose to examine the *contents* of every file used by your `Task`:
+你也可以选择检查由你`Task`使用的文件的*内容*:
 
 ```yaml
 - name: build-and-push-1
@@ -860,10 +792,9 @@ You can also choose to examine the *contents* of every file used by your `Task`:
     find /workspace | xargs cat
 ```
 
-### Inspecting the `Pod`
+### 审视`Pod`
 
-To inspect the contents of the `Pod` used by your `Task` at a specific stage in the `Task's` execution,
-log into the `Pod` and add a `Step` that pauses the `Task` at the desired stage. For example:
+要审视由你`Task`任务所使用的`Pod`的内容，你可以添加一个步骤来在某个阶段暂停，例如:
 
 ```yaml
 - name: pause
@@ -872,6 +803,6 @@ log into the `Pod` and add a `Step` that pauses the `Task` at the desired stage.
 
 ```
 
-Except as otherwise noted, the contents of this page are licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/).
-Code samples are licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+---
+
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
