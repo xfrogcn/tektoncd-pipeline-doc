@@ -6,82 +6,67 @@ weight: 2
 -->
 # TaskRuns
 
-Use the `TaskRun` resource object to create and run on-cluster processes to
-completion.
+使用`TaskRun`资源对象来创建及运行需要在集群中完成的处理.
 
-To create a `TaskRun`, you must first create a [`Task`](tasks.md) which
-specifies one or more container images that you have implemented to perform and
-complete a task.
+要创建一个`TaskRun`，你必须首先创建一个[`Task`](tasks.md) ，通过它指定一个或多个容器镜像来处理需要完成的任务.
 
-A `TaskRun` runs until all `steps` have completed or until a failure occurs.
+`TaskRun`将会一直执行，知道所有`steps`完成或发生了错误.
 
 ---
 
 - [TaskRuns](#taskruns)
-  - [Syntax](#syntax)
-    - [Specifying a task](#specifying-a-task)
-    - [Parameters](#parameters)
-    - [Providing resources](#providing-resources)
-    - [Configuring Default Timeout](#configuring-default-timeout)
-    - [Service Account](#service-account)
-  - [Pod Template](#pod-template)
-  - [Workspaces](#workspaces)
-  - [Status](#status)
-    - [Steps](#steps)
-    - [Results](#results)
-  - [Cancelling a TaskRun](#cancelling-a-taskrun)
-  - [Examples](#examples)
-    - [Example TaskRun](#example-taskrun)
-    - [Example with embedded specs](#example-with-embedded-specs)
-    - [Example Task Reuse](#example-task-reuse)
-      - [Using a `ServiceAccount`](#using-a-serviceaccount)
+  - [语法](#语法)
+    - [指定Task](#指定Task)
+    - [参数](#参数)
+    - [提供资源](#提供资源)
+    - [配置默认超时时间](#配置默认超时时间)
+    - [服务账户](#服务账户)
+  - [Pod模版](#Pod模版)
+  - [工作区](#工作区)
+  - [状态](#状态)
+    - [步骤](#步骤)
+    - [结果](#结果)
+  - [取消TaskRun](#取消TaskRun)
+  - [示例](#取消TaskRun)
+    - [TaskRun示例](#TaskRun示例)
+    - [嵌入规范示例](#嵌入规范示例)
+    - [重复使用Task示例](#重复使用Task示例)
+      - [使用`ServiceAccount`](#使用ServiceAccount)
   - [Sidecars](#sidecars)
   - [LimitRanges](#limitranges)
 
 ---
 
-## Syntax
+## 语法
 
-To define a configuration file for a `TaskRun` resource, you can specify the
-following fields:
+要为`TaskRun`定义一个配置文件，你可以指定以下字段:
 
-- Required:
-  - [`apiVersion`][kubernetes-overview] - Specifies the API version, for example
+- 必须:
+  - [`apiVersion`][kubernetes-overview] - 指定API版本, 例如
     `tekton.dev/v1beta1`.
-  - [`kind`][kubernetes-overview] - Specify the `TaskRun` resource object.
-  - [`metadata`][kubernetes-overview] - Specifies data to uniquely identify the
-    `TaskRun` resource object, for example a `name`.
-  - [`spec`][kubernetes-overview] - Specifies the configuration information for
-    your `TaskRun` resource object.
-    - [`taskRef` or `taskSpec`](#specifying-a-task) - Specifies the details of
-      the [`Task`](tasks.md) you want to run
-- Optional:
+  - [`kind`][kubernetes-overview] - 指定为`TaskRun`资源对象.
+  - [`metadata`][kubernetes-overview] - 指定`TaskRun`资源对象独有的元数据，如一个`名称（name）`.
+  - [`spec`][kubernetes-overview] - 指定`TaskRun`资源对象的配置信息.
+    - [`taskRef` 或 `taskSpec`](#指定Task) - 指定你想要运行的[`Task`](tasks.md) 详情
+- 可选:
 
-  - [`serviceAccountName`](#service-account) - Specifies a `ServiceAccount` resource
-    object that enables your build to run with the defined authentication
-    information. When a `ServiceAccount` isn't specified, the `default-service-account`
-    specified in the configmap `config-defaults` will be applied.
-  - [`params`](#parameters) - Specifies parameters values
-  - [`resources`](#providing-resources) - Specifies `PipelineResource` values
-    - [`inputs`] - Specifies input resources
-    - [`outputs`] - Specifies output resources
-  - [`timeout`] - Specifies timeout after which the `TaskRun` will fail. If the value of
-    `timeout` is empty, the default timeout will be applied. If the value is set to 0,
-    there is no timeout. You can also follow the instruction [here](#Configuring-default-timeout)
-    to configure the default timeout.
-  - [`podTemplate`](#pod-template) - Specifies a [pod template](./podtemplates.md) that will be used as the basis for the `Task` pod.
-  - [`workspaces`](#workspaces) - Specify the actual volumes to use for the
-    [workspaces](workspaces.md#declaring-workspaces-in-tasks) declared by a `Task`
+  - [`serviceAccountName`](#服务账户) - 指定`ServiceAccount`资源对象，它允许你的构建在特定授权信息下运行。当`ServiceAccount`未指定时，将使用由配置映射`config-defaults`中配置的`default-service-account`的值.
+  - [`params`](#parameters) - 指定参数值
+  - [`resources`](#提供资源) - 指定 `PipelineResource` 值
+    - [`inputs`] - 指定输入资源
+    - [`outputs`] - 指定输出资源
+  - [`timeout`] - 指定`TaskRun`超时失败时间，如果`timeout`为空，将使用默认的超时时间，如果值设置为0，表示没有超时时间，你可以参考[此处](#配置默认超时时间).
+  - [`podTemplate`](#pod模版) - 指定一个[pod 模版](./podtemplates.md) ，它将被用于基础的`Task`pod.
+  - [`workspaces`](#工作区) - 为`Task`中定义的[工作区]](workspaces.md#declaring-workspaces-in-tasks)指定真实的卷.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
 
-### Specifying a task
+### 指定Task
 
-Since a `TaskRun` is an invocation of a [`Task`](tasks.md), you must specify
-what `Task` to invoke.
+由于`TaskRun`是[`Task`](tasks.md)的调用者, 你必须指定那个`Task`要被运行.
 
-You can do this by providing a reference to an existing `Task`:
+你可以通过提供一个已存在`Task`的引用:
 
 ```yaml
 spec:
@@ -89,7 +74,7 @@ spec:
     name: read-task
 ```
 
-Or you can embed the spec of the `Task` directly in the `TaskRun`:
+或者你可以直接内嵌`Task`规范来实现:
 
 ```yaml
 spec:
@@ -101,7 +86,7 @@ spec:
     steps:
       - name: build-and-push
         image: gcr.io/kaniko-project/executor:v0.17.1
-        # specifying DOCKER_CONFIG is required to allow kaniko to detect docker credential
+        # 定义DOCKER_CONFIG是必须的，以便kaniko来获取docker凭据
         env:
           - name: "DOCKER_CONFIG"
             value: "/tekton/home/.docker/"
@@ -111,10 +96,9 @@ spec:
           - --destination=gcr.io/my-project/gohelloworld
 ```
 
-### Parameters
+### 参数
 
-If a `Task` has [`parameters`](tasks.md#parameters), you can specify values for
-them using the `params` section:
+如果一个`Task`具有[`参数`](tasks.md#详述-Parameters), 你可以通过`params`来设置它们的值:
 
 ```yaml
 spec:
@@ -123,16 +107,14 @@ spec:
       value: -someflag
 ```
 
-If a parameter does not have a default value, it must be specified.
+如果一个参数没有默认值，它必须被指定.
 
-### Providing resources
+### 提供资源
 
-If a `Task` requires [input resources](tasks.md#input-resources) or
-[output resources](tasks.md#output-resources), they must be provided to run the
-`Task`.
+如果一个`Task`需要[输入资源](tasks.md#input-resources) 或者
+[输出资源](tasks.md#output-resources), 它们必须提供来运行`Task`.
 
-They can be provided via references to existing
-[`PipelineResources`](resources.md):
+它们可以通过引用已存在的[`PipelineResources`](resources.md)资源来完成:
 
 ```yaml
 spec:
@@ -147,7 +129,7 @@ spec:
           name: my-app-image
 ```
 
-Or by embedding the specs of the resources directly:
+或者直接内嵌资源对象定义:
 
 ```yaml
 spec:
@@ -161,51 +143,33 @@ spec:
               value: https://github.com/pivotal-nader-ziada/gohelloworld
 ```
 
-The `paths` field can be used to [override the paths to a resource](./resources.md#overriding-where-resources-are-copied-from)
+`paths`字段可以被用于[覆盖资源的路径](./resources.md#overriding-where-resources-are-copied-from)
 
-### Configuring Default Timeout
+### 配置默认超时时间
 
-You can configure the default timeout by changing the value of
-`default-timeout-minutes` in
-[`config/config-defaults.yaml`](./../config/config-defaults.yaml).
+你可以通过修改[`config/config-defaults.yaml`](./../config/config-defaults.yaml)中的`default-timeout-minutes`值来修改默认超时时间.
 
-The `timeout` format is a `duration` as validated by Go's
-[`ParseDuration`](https://golang.org/pkg/time/#ParseDuration), valid format for
-examples are :
+`timeout`的格式为Go语言[`ParseDuration`](https://golang.org/pkg/time/#ParseDuration)`时长`，例如:
 
 - `1h30m`
 - `1h`
 - `1m`
 - `60s`
 
-The default timeout is 60 minutes, if `default-timeout-minutes` is not
-available. There is no timeout by default, if `default-timeout-minutes` is set
-to 0.
+如果`default-timeout-minutes`无效，默认的超时时间为60分钟，如果`default-timeout-minutes`设置为0，则没有默认超时时间.
 
-### Service Account
+### 服务账户
 
-Specifies the `name` of a `ServiceAccount` resource object. Use the
-`serviceAccountName` field to run your `Task` with the privileges of the specified
-service account. If no `serviceAccountName` field is specified, your `Task` runs
-using the service account specified in the ConfigMap `configmap-defaults`
-which if absent will default to
-[`default` service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server)
-that is in the [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
-of the `TaskRun` resource object.
+指定`ServiceAccount`资源对象的名称。使用`serviceAccountName`字段指定的服务账户来运行你的任务. 如果未指定`serviceAccountName`字段，你的`Task`将会使用配置映射`configmap-defaults`中设置的值，如果没有，将使用`TaskRun`资源对象所在[命名空间](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)的
+[`default`服务账户](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server).
 
-For examples and more information about specifying service accounts, see the
-[`ServiceAccount`](./auth.md) reference topic.
+有关指定服务账户的示例和更多信息，可参考[`服务账户`](./auth.md) 相关主题.
 
-## Pod Template
+## Pod模版
 
-Specifies a [pod template](./podtemplates.md) configuration that will be used as the basis for the `Task` pod. This
-allows to customize some Pod specific field per `Task` execution, aka `TaskRun`.
+指定一个[pod模版](./podtemplates.md) 配置，它将由`Task`Pod作为基础模版来使用. 这允许为每一个`Task`自定义一些Pod规则字段.
 
-In the following example, the Task is defined with a `volumeMount`
-(`my-cache`), that is provided by the TaskRun, using a
-PersistentVolumeClaim. The SchedulerName has also been provided to define which scheduler should be used to
-dispatch the Pod. The Pod will also run as a non-root user. HostNetwork has been allowed to carry out
-operations in the Node's Network Namespace (on which the Pod is scheduled).
+在以下示例中，任务定义了一个`volumeMount`(`my-cache`),它由TaskRun来指定，使用了一个持久化卷。通过SchedulerName字段指定使用哪一个调度器来调度Pod。Pod将作为非根用户运行，HostNetwork设置为true将使用宿主的网络空间.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -242,38 +206,33 @@ spec:
         claimName: my-volume-claim
 ```
 
-## Workspaces
+## 工作区
 
-For a `TaskRun` to execute a `Task` that declares `workspaces` it needs to map
-those `workspaces` to actual physical volumes.
+要执行定义有`工作区`的`Task`,必须将`工作区`映射到真实物理卷.
 
-Here are the relevant fields of a `TaskRun` spec when providing a
-`PersistentVolumeClaim` as a workspace:
+以下是`TaskTun`中使用`PersistentVolumeClaim`作为工作区的相关字段:
 
 ```yaml
 workspaces:
-- name: myworkspace # must match workspace name in Task
+- name: myworkspace # 必须和Task中定义的工作区名称一致
   persistentVolumeClaim:
-    claimName: mypvc # this PVC must already exist
+    claimName: mypvc # 此PVC必须存在
   subPath: my-subdir
 ```
 
-For more examples and complete documentation on configuring `workspaces` in
-`TaskRun`s see [workspaces.md](./workspaces.md#providing-workspaces-with-taskruns).
+有关在`TaskRun`中配置`工作区`的更多示例及完整文档，请参考[workspaces.md](./workspaces.md#providing-workspaces-with-taskruns).
 
-Tekton supports several different kinds of `Volume` in `Workspaces`. For a list of
-the different kinds see the section on
-[`VolumeSources` for Workspaces](workspaces.md#volumesources-for-workspaces).
+Tekton支持多种不同`Volume`类型的`工作区`，有关工作区的不同类型，参考[工作区的`VolumeSources`](workspaces.md#volumesources-for-workspaces).
 
-_For a complete example see [the Workspaces TaskRun](../examples/v1beta1/taskruns/workspace.yaml)
-in the examples directory._
 
-## Status
+_有关完整示例参考示例目录下的[TaskRun工作区](../examples/v1beta1/taskruns/workspace.yaml)._
 
-As a TaskRun completes, its `status` field is filled in with relevant information for
-the overall run, as well as each step.
+## 状态
 
-The following example shows a completed TaskRun and its `status` field:
+当一个TaskRun完成，它的`status`字段中将填充整个运行期间的信息，
+并且包含每一个步骤.
+
+以下示例展示了一个完成的TaskRun及其`status`字段:
 
 ```yaml
 completionTime: "2019-08-12T18:22:57Z"
@@ -297,24 +256,17 @@ steps:
     startedAt: "2019-08-12T18:22:54Z"
   ```
 
-Fields include start and stop times for the `TaskRun` and each `Step` and exit codes.
-For each step we also include the fully-qualified image used, with the digest.
+字段包含`TaskRun`的开始和结束时间，以及每一个步骤的退出代码，针对每一个步骤同时包含完整的镜像摘要.
 
-If any pods have been [`OOMKilled`](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/)
-by Kubernetes, the `Taskrun` will be marked as failed even if the exit code is 0.
+如果任何Pod发生[`OOMKilled`](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/), `TaskRun`将会标记为失败，尽管它的退出代码可能为0.
 
-### Steps
+### 步骤
 
-If multiple `steps` are defined in the `Task` invoked by the `TaskRun`, we will see the
-`status.steps` of the `TaskRun` displayed in the same order as they are defined in
-`spec.steps` of the `Task`, when the `TaskRun` is accessed by the `get` command, e.g.
-`kubectl get taskrun <name> -o yaml`. Replace \<name\> with the name of the `TaskRun`.
+如果多个定义在`Task`中的步骤被`TaskRun`调用，我们将会看到`TaskRun`中`status.steps`展示的步骤顺序与`Task`中`spec.steps`中定义顺序一致，当使用`get`命令获取`TaskRun`时，例如`kubectl get taskrun <name> -o yaml`. 替换 \<name\> 为`TaskRun`的名称.
 
-### Results
+### 结果
 
-If one or more `results` are defined in the `Task` invoked by the `TaskRun`, we will get a new entry
-`Task Results` added to the status.
-Here is an example:
+如果通过`TaskRun`调用了由`Task`定义的一个或多个`results`,我们将在状态节点中获取到`Task Results`. 例如:
 
 ```yaml
 Status:
@@ -330,12 +282,11 @@ Status:
 
 ```
 
-Results will be printed verbatim; any new lines or other whitespace returned as part of the result will be included in the output.
+结果将会被逐字被打印，任何新行或则其他空白换行将会包含在输出中
 
-## Cancelling a TaskRun
+## 取消TaskRun
 
-In order to cancel a running task (`TaskRun`), you need to update its spec to
-mark it as cancelled. Running Pods will be deleted.
+要取消一个正在执行任务的(`TaskRun`), 你需要更新它的spec，将其状态标记为取消. 正在运行的Pod将会被删除.
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -347,18 +298,15 @@ spec:
   status: "TaskRunCancelled"
 ```
 
-## Examples
+## 示例
 
-- [Example TaskRun](#example-taskrun)
-- [Example TaskRun with embedded specs](#example-with-embedded-specs)
-- [Example Task reuse](#example-task-reuse)
+- [TaskRun示例](#TaskRun示例)
+- [嵌入规范示例](#嵌入规范示例)
+- [重复使用Task示例](#重复使用Task示例)
 
-### Example TaskRun
+### TaskRun示例
 
-To run a `Task`, create a new `TaskRun` which defines all inputs, outputs that
-the `Task` needs to run. Below is an example where Task `read-task` is run by
-creating `read-repo-run`. Task `read-task` has git input resource and TaskRun
-`read-repo-run` includes reference to `go-example-git`.
+要运行一个`Task`，创建一个新的`TaskRun`,通过它指定运行`Task`所需的输入、输出。以下示例通过创建`read-repo-run`来运行`read-task`任务，任务`read-task`有一个git输入资源，TaskRun`read-repo-run`包含了`go-example-git`的git资源引用.
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -399,12 +347,10 @@ spec:
           name: go-example-git
 ```
 
-### Example with embedded specs
+### 嵌入规范示例
 
-Another way of running a Task is embedding the TaskSpec in the taskRun yaml.
-This can be useful for "one-shot" style runs, or debugging. TaskRun resource can
-include either Task reference or TaskSpec but not both. Below is an example
-where `build-push-task-run-2` includes `TaskSpec` and no reference to Task.
+运行Task的另一种方式是在taskRun中嵌入Task资源.
+这适合于只运行一次的任务，或者调试. TaskRun资源可以包含Task引用或则TaskSpec，当不能同时包含. 以下示例`build-push-task-run-2` 包含 `TaskSpec` 而没有引用Task.
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -435,7 +381,7 @@ spec:
     steps:
       - name: build-and-push
         image: gcr.io/kaniko-project/executor:v0.17.1
-        # specifying DOCKER_CONFIG is required to allow kaniko to detect docker credential
+        # 必须指定DOCKER_CONFIG，以便kaniko获取docker凭据
         env:
           - name: "DOCKER_CONFIG"
             value: "/tekton/home/.docker/"
@@ -445,10 +391,7 @@ spec:
           - --destination=gcr.io/my-project/gohelloworld
 ```
 
-Input and output resources can also be embedded without creating Pipeline
-Resources. TaskRun resource can include either a Pipeline Resource reference or
-a Pipeline Resource Spec but not both. Below is an example where Git Pipeline
-Resource Spec is provided as input for TaskRun `read-repo`.
+输入和输出资源同样也可以内嵌而无需创建管道资源. TaskRun资源可以包含管道资源的引用或则管道资源定义，但不能同时包含. 以下示例中，Git管道资源定义直接提供给运行`read-repo`任务的TaskRun.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -468,18 +411,16 @@ spec:
               value: https://github.com/pivotal-nader-ziada/gohelloworld
 ```
 
-**Note**: TaskRun can embed both TaskSpec and resource spec at the same time.
-The `TaskRun` will also serve as a record of the history of the invocations of
-the `Task`.
+**注意**: TaskRun可以通过内嵌Task定义和资源定义.`TaskRun`也可作为运行`Task`任务的历史记录.
 
-### Example Task Reuse
+### 重复使用Task示例
 
-For the sake of illustrating re-use, here are several example
-[`TaskRuns`](taskruns.md) (including referenced
-[`PipelineResources`](resources.md)) instantiating the
-[`Task` (`dockerfile-build-and-push`) in the `Task` example docs](tasks.md#example-task).
+有以下几个示例阐述了如何重用任务
+[`TaskRuns`](taskruns.md) (包含引用
+[`PipelineResources`](resources.md)) 实例化
+[`Task` (`dockerfile-build-and-push`) 在`Task` 示例文档中](tasks.md#example-task).
 
-Build `mchmarny/rester-tester`:
+构建 `mchmarny/rester-tester`:
 
 ```yaml
 # The PipelineResource
@@ -507,7 +448,7 @@ spec:
           name: mchmarny-repo
 ```
 
-Build `googlecloudplatform/cloud-builder`'s `wget` builder:
+构建 `googlecloudplatform/cloud-builder`'的 `wget` 构建器:
 
 ```yaml
 # The PipelineResource
@@ -538,7 +479,7 @@ spec:
           name: cloud-builder-repo
 ```
 
-Build `googlecloudplatform/cloud-builder`'s `docker` builder with `17.06.1`:
+构建 `googlecloudplatform/cloud-builder`的`docker` 构建器:
 
 ```yaml
 # The PipelineResource
@@ -571,9 +512,9 @@ spec:
           name: cloud-builder-repo
 ```
 
-#### Using a `ServiceAccount`
+#### 使用`ServiceAccount`
 
-Specifying a `ServiceAccount` to access a private `git` repository:
+定义一个 `ServiceAccount` 来访问私有`git` 仓储:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -593,7 +534,7 @@ spec:
       args: ["-c", "cat README.md"]
 ```
 
-Where `serviceAccountName: test-build-robot-git-ssh` references the following
+ `serviceAccountName: test-build-robot-git-ssh`引用以下的
 `ServiceAccount`:
 
 ```yaml
@@ -605,7 +546,7 @@ secrets:
   - name: test-git-ssh
 ```
 
-And `name: test-git-ssh`, references the following `Secret`:
+ `name: test-git-ssh`, 引用以下的`Secret`:
 
 ```yaml
 apiVersion: v1
@@ -624,66 +565,32 @@ data:
   known_hosts: Z2l0aHViLmNvbSBzc2g.....[example]
 ```
 
-Specifies the `name` of a `ServiceAccount` resource object. Use the
-`serviceAccountName` field to run your `Task` with the privileges of the specified
-service account. If no `serviceAccountName` field is specified, your `Task` runs
-using the
-[`default` service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server)
-that is in the
-[namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
-of the `Task` resource object.
+指定`ServiceAccount`资源对象的`name`. 使用`serviceAccountName`字段来在指定的服务账户权限下运行你的`Task`. 如果没有指定`serviceAccountName` 字段，你的`Task`将使用与`Task`资源对象相同[命名空间](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)下的[`default` 服务账户](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server)
+来运行.
 
-For examples and more information about specifying service accounts, see the
-[`ServiceAccount`](./auth.md) reference topic.
+有关指定服务账户的更多示例及信息，请参考[`ServiceAccount`](./auth.md) 相关主题.
 
 ## Sidecars
 
-A well-established pattern in Kubernetes is that of the "sidecar" - a
-container which runs alongside your workloads to provide ancillary support.
-Typical examples of the sidecar pattern are logging daemons, services to
-update files on a shared volume, and network proxies.
+在Kubernetes中已经固定的模式“sidecar”——一种容器可以与你的工作负载同时运行来提供辅助功能.
+常见的sidecar模式示例是日志、更新文件的服务以及网络代理.
 
-Tekton will happily work with sidecars injected into a TaskRun's
-pods but the behavior is a bit nuanced: When TaskRun's steps are complete
-any sidecar containers running inside the Pod will be terminated. In
-order to terminate the sidecars they will be restarted with a new
-"nop" image that quickly exits. The result will be that your TaskRun's
-Pod will include the sidecar container with a Retry Count of 1 and
-with a different container image than you might be expecting.
+Tekton很乐意为运行TaskRun的Pod注入sidecars，但是边车的行为不太一样：当TaskRun步骤完成时，任何Pod中包含的边车容器将会被终止. 为了终止sidecars，它将重启一个新的"nop"镜像然后快速退出.这样的结果是你的TaskRun Pod将会包含一个边车容器，它的重试次数为1，以及一个你与你期望不一致的容器镜像.
 
-Note: There are some known issues with the existing implementation of sidecars:
+注意: 这里有一些当前边车实现已知的问题:
 
-- The configured "nop" image must not provide the command that the
-sidecar is expected to run. If it does provide the command then it will
-not exit. This will result in the sidecar running forever and the Task
-eventually timing out. [This bug is being tracked in issue 1347](https://github.com/tektoncd/pipeline/issues/1347)
-is the issue where this bug is being tracked.
+- 配置的“nop”镜像不能提供sidecar预期运行的命令，如果提供了命令，它将不会退出，这将导致sidecar一直运行，直接任务超时事件发生。[此问题链接](https://github.com/tektoncd/pipeline/issues/1347)
 
-- `kubectl get pods` will show a TaskRun's Pod as "Completed" if a sidecar
-exits successfully and "Error" if the sidecar exits with an error, regardless
-of how the step containers inside that pod exited. This issue only manifests
-with the `get pods` command. The Pod description will instead show a Status of
-Failed and the individual container statuses will correctly reflect how and why
-they exited.
+- 执行`kubectl get pods` 命令，如果sidecar成功退出，TaskRun的Pod将显示为完成状态，如果sidecar发生错误退出，Pod将显示错误状态，而不管步骤容器退出的状态如何，此问题仅仅在`get pods`命令出现，Pod的描述将会显示失败状态，并包含每一个单独容器的状态及退出原因.
 
 ## LimitRanges
 
-In order to request the minimum amount of resources needed to support the containers
-for `steps` that are part of a `TaskRun`, Tekton only requests the maximum values for CPU,
-memory, and ephemeral storage from the `steps` that are part of a TaskRun. Only the max
-resource request values are needed since `steps` only execute one at a time in a `TaskRun` pod.
-All requests that are not the max values are set to zero as a result.
+为了为`TaskRun`中的`steps`容器请求运行是需要的最小资源，Tekton仅请求TaskRun中`steps`中的最大cpu、内存以及临时存储，只需要最大的单个容器资源，因为`TaskRun` Pod中步骤只有一次执行一个。所有不是最大值的请求都将被设置为0.
 
-When a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/) is present in a namespace
-with a minimum set for container resource requests (i.e. CPU, memory, and ephemeral storage) where `TaskRuns`
-are attempting to run, Tekton will search through all LimitRanges present in the namespace and use the minimum
-set for container resource requests instead of requesting 0.
+当在命名空间中通过[LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/)设置了容器的最小资源请求时（如CPU、内存、临时存储），Tekton将会搜索命名空间所有Limitranges，并将容器资源请求设置为这些值，而不是设置为0.
 
-An example `TaskRun` with a LimitRange is available [here](../examples/v1beta1/taskruns/no-ci/limitrange.yaml).
+使用LimitRange的`TaskRun`示例可参考[此处](../examples/v1beta1/taskruns/no-ci/limitrange.yaml).
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
