@@ -4,131 +4,101 @@ linkTitle: "PipelineResources"
 weight: 6
 ---
 -->
-# PipelineResources
+# 管道资源
 
-`PipelineResources` in a pipeline are the set of objects that are going to be
-used as inputs to a [`Task`](tasks.md) and can be output by a `Task`.
+管道中的`PipelineResources`是一组对象，可用于[`Task`](tasks.md)的输入及作为`Task`
+的输出.
 
-A `Task` can have multiple inputs and outputs.
+`Task`可以有多个输入和输出.
 
-For example:
+例如:
 
--   A `Task`'s input could be a GitHub source which contains your application
-    code.
--   A `Task`'s output can be your application container image which can be then
-    deployed in a cluster.
--   A `Task`'s output can be a jar file to be uploaded to a storage bucket.
+-   `Task`输入可以为GitHub源，包含你应用的代码.
+-   `Task`的输出可以是你的应用镜像，可用于部署到集群中.
+-   `Task`可以为jar文件，可上传到存储桶.
 
-> **Note**: PipelineResources have not been promoted to Beta in tandem with Pipeline's
-> other CRDs. This means that the level of support for `PipelineResources`
-> remains Alpha and there are effectively no guarantees about the type's future.
-> There remain a lot of known issues with the type that have caused Tekton's
-> developers to reassess it.
+> **注意**: 管道资源尚未提升到Beta版本，这表示`PipelineResources`的支持还是Alpha状态，并不保证此类型在未来的支持. Tekton开发人员对其进行了重新评估，但是仍然存在很多已知问题.
 >
-> For Beta-supported alternatives to PipelineResources see
-> [the v1alpha1 to v1beta1 migration guide](./migrating-v1alpha1-to-v1beta1.md#pipelineresources-and-catalog-tasks)
-> which lists each PipelineResource type and a suggested option for replacing it.
+> 有关PipeResources的可选Beta支持，可参考[v1alpha1 到 v1beta1 合并向导](./migrating-v1alpha1-to-v1beta1.md#pipelineresources-and-catalog-tasks)
+> ，这列出了每一个类型的管道资源以及建议的替换建议.
 >
-> For more information on why PipelineResources are remaining alpha [see the description
-> of their problems, along with next steps, below](#why-arent-pipelineresources-in-beta).
+> 有关管道资源为什么还是alpha状态的更多信息[参考这些问题的描述，以及接下来的步骤](#why-arent-pipelineresources-in-beta).
 
 --------------------------------------------------------------------------------
 
--   [Syntax](#syntax)
--   [Using Resources](#using-resources)
-    -   [Variable substitution](#variable-substitution)
-    -   [Controlling where resources are mounted](#controlling-where-resources-are-mounted)
-    -   [Overriding where resources are copied from](#overriding-where-resources-are-copied-from)
-    -   [Resource Status](#resource-status)
-    -   [Optional Resources](#optional-resources)
--   [Resource types](#resource-types)
-    -   [Git Resource](#git-resource)
-    -   [Pull Request Resource](#pull-request-resource)
-    -   [Image Resource](#image-resource)
-    -   [Cluster Resource](#cluster-resource)
-    -   [Storage Resource](#storage-resource)
-        -   [GCS Storage Resource](#gcs-storage-resource)
-        -   [BuildGCS Storage Resource](#buildgcs-storage-resource)
-    -   [Cloud Event Resource](#cloud-event-resource)
--   [Why Aren't PipelineResources in Beta?](#why-arent-pipelineresources-in-beta)
+-   [语法](#语法)
+-   [使用资源](#使用资源)
+    -   [变量替换](#变量替换)
+    -   [控制资源挂载位置](#控制资源挂载位置)
+    -   [覆盖资源复制到的位置](#覆盖资源复制到的位置)
+    -   [资源状态](#资源状态)
+    -   [可选的资源](#可选的资源)
+-   [资源类型](#资源类型)
+    -   [Git 资源](#git-资源)
+    -   [Pull Request 资源](#pull-request-资源)
+    -   [Image 资源](#image-资源)
+    -   [Cluster 资源](#cluster-资源)
+    -   [Storage 资源](#storage-资源)
+        -   [GCS存储资源](#GCS存储资源)
+        -   [BuildGCS存储资源](#BuildGCS存储资源)
+    -   [云事件资源](#云事件资源)
+-   [为何PipelineResources未提升到Beta?](#为何PipelineResources未提升到Beta)
 
-## Syntax
+## 语法
 
-To define a configuration file for a `PipelineResource`, you can specify the
-following fields:
+要定义一个`PipelineResource`配置文件，你可以指定以下字段:
 
--   Required:
-    -   [`apiVersion`][kubernetes-overview] - Specifies the API version, for
-        example `tekton.dev/v1alpha1`.
-    -   [`kind`][kubernetes-overview] - Specify the `PipelineResource` resource
-        object.
-    -   [`metadata`][kubernetes-overview] - Specifies data to uniquely identify
-        the `PipelineResource` object, for example a `name`.
-    -   [`spec`][kubernetes-overview] - Specifies the configuration information
-        for your `PipelineResource` resource object.
-        -   [`type`](#resource-types) - Specifies the `type` of the
-            `PipelineResource`
--   Optional:
-    -   [`description`](#description) - Description of the Resource.
-    -   [`params`](#resource-types) - Parameters which are specific to each type
-        of `PipelineResource`
-    -   [`optional`](#optional-resources) - Boolean flag to mark a resource
-        optional (by default, `optional` is set to `false` making resources
-        mandatory).
+-   必须:
+    -   [`apiVersion`][kubernetes-overview] - 指定API版本, 如`tekton.dev/v1alpha1`.
+    -   [`kind`][kubernetes-overview] - 指定为`PipelineResource`资源对象
+    -   [`metadata`][kubernetes-overview] - 指定管道资源对象的元数据，如`名称(name)`.
+    -   [`spec`][kubernetes-overview] - 管道资源的配置信息.
+        -   [`type`](#资源类型) - 管道资源的类型
+-   可选:
+    -   [`description`](#描述) -  资源的描述.
+    -   [`params`](#资源类型) - 针对每一种管道资源类型的参数设置
+    -   [`optional`](#可选的资源) - 标记资源是否为可选(默认下, `optional` 设置为 `false`, 标记资源为必须).
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
 
-## Using Resources
+## 使用资源
 
-Resources can be used in [Tasks](./tasks.md) and
+资源可用于[Tasks](./tasks.md) 以及
 [Conditions](./conditions.md#resources).
 
-Input resources, like source code (git) or artifacts, are dumped at path
-`/workspace/task_resource_name` within a mounted
-[volume](https://kubernetes.io/docs/concepts/storage/volumes/) and are available
-to all [`steps`](#steps) of your `Task`. The path that the resources are mounted
-at can be
-[overridden with the `targetPath` field](./resources.md#controlling-where-resources-are-mounted).
-Steps can use the `path`[variable substitution](#variable-substitution) key to
-refer to the local path to the mounted resource.
+输入资源，像源代码(git)或者工件，被转储到路径`/workspace/task_resource_name`, 在挂载的[volume](https://kubernetes.io/docs/concepts/storage/volumes/) 中，并在所有[`steps`](#步骤)中有效. 资源挂载的路径可以通过[覆盖`targetPath`来进行设置](./resources.md#控制资源挂载位置).
+步骤可通过[变量替换](#variable-substitution) 使用`path`键获取资源挂载路径.
 
-### Variable substitution
+### 变量替换
 
-`Task` and `Condition` specs can refer resource params as well as predefined
-variables such as `path` using the variable substitution syntax below where
-`<name>` is the resource's `name` and `<key>` is one of the resource's `params`:
+在`Task`和`Condition`配置中可通过变量替换引用资源预定义的参数，以下`<name>`表示资源的`name`以及`<key>`是有关资源类型的`params`:
 
-#### In Task Spec:
+#### 在Task配置中:
 
-For an input resource in a `Task` spec: `shell $(resources.inputs.<name>.<key>)`
+对于`Task`配置中的输入资源: `shell $(resources.inputs.<name>.<key>)`
 
-Or for an output resource:
+或者输出资源:
 
 ```shell
-$(outputs.resources.<name>.<key>)
+$(resources.outputs.<name>.<key>)
 ```
 
-#### In Condition Spec:
+#### 在Condition配置中:
 
-Input resources can be accessed by:
+输入资源可通过以下访问:
 
 ```shell
 $(resources.<name>.<key>)
 ```
 
-#### Accessing local path to resource
+#### 访问资源的本地路径
 
-The `path` key is predefined and refers to the local path to a resource on the
-mounted volume `shell $(resources.inputs.<name>.path)`
+`path`键表示资源挂载的本地路径`shell $(resources.inputs.<name>.path)`
 
-### Controlling where resources are mounted
+### 控制资源挂载位置
 
-The optional field `targetPath` can be used to initialize a resource in a
-specific directory. If `targetPath` is set, the resource will be initialized
-under `/workspace/targetPath`. If `targetPath` is not specified, the resource
-will be initialized under `/workspace`. The following example demonstrates how
-git input repository could be initialized in `$GOPATH` to run tests:
+可选的字段`targetPath`可用于指定资源到特定的目录, 如果`targetPath`被设置，资源将会初始化到`/workspace/targetPath`下，如果`targetPath`没有指定，资源将初始化到`/workspace`目录中，以下示例展示了git输入仓储初始化到`$GOPATH`来运行测试:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -155,7 +125,7 @@ spec:
           value: /workspace/go
 ```
 
-### Overriding where resources are copied from
+### 覆盖资源复制到的位置
 
 When specifying input and output `PipelineResources`, you can optionally specify
 `paths` for each resource. `paths` will be used by `TaskRun` as the resource's

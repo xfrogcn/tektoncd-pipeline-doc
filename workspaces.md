@@ -4,98 +4,71 @@ linkTitle: "Workspaces"
 weight: 5
 ---
 -->
-# Workspaces
+# 工作区
 
-- [Overview](#overview)
-  - [`Workspaces` in `Tasks` and `TaskRuns`](#workspaces-in-tasks-and-taskruns)
-  - [`Workspaces` in `Pipelines` and `PipelineRuns`](#workspaces-in-pipelines-and-pipelineruns)
-- [Configuring `Workspaces`](#configuring-workspaces)
-  - [Using `Workspaces` in `Tasks`](#using-workspaces-in-tasks)
-    - [Using `Workspace` variables in `TaskRuns`](#using-workspace-variables-in-taskruns)
-    - [Mapping `Workspaces` in `Tasks` to `TaskRuns`](#mapping-workspaces-in-tasks-to-taskruns)
-    - [Examples of `TaskRun` definitions using `Workspaces`](#examples-of-taskrun-definitions-using-workspaces)
-  - [Using `Workspaces` in `Pipelines`](#using-workspaces-in-pipelines)
-    - [Specifying `Workspace` order in a `Pipeline`](#specifying-workspace-order-in-a-pipeline)
-    - [Specifying `Workspaces` in `PipelineRuns`](#specifying-workspaces-in-pipelineruns)
-    - [Example `PipelineRun` definitions using `Workspaces`](#example-pipelinerun-definitions-using-workspaces)
-  - [Specifying `VolumeSources` in `Workspaces`](#specifying-volumesources-in-workspaces)
-- [More examples](#more-examples)
+- [概览](#概览)
+  - [`Tasks`和`TaskRuns`中的`工作区（Workspaces）`](#Tasks和TaskRuns中的工作区（Workspaces）)
+  - [`Pipelines`和`PipelineRuns`中的`工作区`](#Pipelines和PipelineRuns中的工作区)
+- [配置`工作区`](#配置工作区)
+  - [在`Tasks`中使用`工作区`](#在Tasks中使用工作区)
+    - [在`TaskRuns`中使用`工作区`变量](#在TaskRuns中使用工作区变量)
+    - [映射`Tasks`中的`工作区`到`TaskRuns`](#映射Tasks中的工作区到TaskRuns)
+    - [使用`工作区`的`TaskRun`定义示例](#使用工作区的TaskRun定义示例)
+  - [在`Pipelines`中使用`工作区`](#在Pipelines中使用工作区)
+    - [在`Pipeline`中指定`工作区`顺序](#在Pipeline中指定工作区顺序)
+    - [在`PipelineRuns`中指定`工作区`](#在PipelineRuns中指定工作区)
+    - [使用`工作区`的`PipelineRun`定义示例](#使用工作区的PipelineRun定义示例)
+  - [在`Workspaces`中指定`VolumeSources`](#在Workspaces中指定VolumeSources)
+- [更多示例](#更多示例)
 
-## Overview
+## 概览
 
-`Workspaces` allow `Tasks` to declare parts of the filesystem that need to be provided
-at runtime by `TaskRuns`. A `TaskRun` can make these parts of the filesystem available
-in many ways: using a read-only `ConfigMap` or `Secret`, an existing `PersistentVolumeClaim`
-shared with other Tasks, create a `PersistentVolumeClaim` from a provided `VolumeClaimTemplate`, or simply an `emptyDir` that is discarded when the `TaskRun`
-completes.
+`工作区`允许`Tasks`定义一部分文件系统，然后通过`TaskRuns`在运行时提供。`TaskRun`可以通过多种方式来指定：使用只读的`ConfigMap`或`Secret`，已存在的`PersistentVolumeClaim`，由提供的`VolumeClaimTemplate`模版创建新的`PersistentVolumeClaim`，或则简单的`emptyDir`.
 
-`Workspaces` are similar to `Volumes` except that they allow a `Task` author 
-to defer to users and their `TaskRuns` when deciding which class of storage to use.
+`工作区`与`Volumes`相似，除了它允许`Task`作者让用户和`TaskRuns`运行是决定使用哪一个存储类.
 
-Workspaces can serve the following purposes:
+工作区可用于以下目的:
 
-- Storage of inputs and/or outputs
-- Sharing data among `Tasks`
-- A mount point for credentials held in `Secrets`
-- A mount point for configurations held in `ConfigMaps`
-- A mount point for common tools shared by an organization
-- A cache of build artifacts that speed up jobs
+- 存储输入或输出
+- 在`Tasks`之间分享数据
+- 挂载`Secrets`中的凭证
+- 挂载`ConfigMaps`中的配置
+- 挂载组织中的常用工具
+- 缓存工件来加速构建过程
 
-### Workspaces in `Tasks` and `TaskRuns`
+### `Tasks`和`TaskRuns`中的`工作区（Workspaces）`
 
-`Tasks` specify where a `Workspace` resides on disk for its `Steps`. At
-runtime, a `TaskRun` provides the specific details of the `Volume` that is
-mounted into that `Workspace`.
+`Tasks`为起步骤指明一个`工作区`存在于磁盘中，在运行时，`TaskRun`提供`Volume`明细来挂载到`工作区`中.
 
-This separation of concerns allows for a lot of flexibility. For example, in isolation,
-a single `TaskRun` might simply provide an `emptyDir` volume that mounts quickly
-and disappears at the end of the run. In a more complex system, however, a `TaskRun`
-might use a `PersistentVolumeClaim` which is pre-populated with
-data for the `Task` to process. In both scenarios the `Task's`
-`Workspace` declaration remains the same and only the runtime
-information in the `TaskRun` changes.
+关注点的分离可以提供更多的灵活性，例如，隔离的`TaskRun`可以通过提供`emptyDir`卷来更快地挂载，然后在执行完成后自动清除. 在更复杂的系统中，`TaskRun`可能使用`PersistentVolumeClaim`提前准备好数据供`Task`处理。这两种场景可能使用同一个`Task's`及`工作区`，然后在`TaskRun`中根据情况来指定.
 
-### `Workspaces` in `Pipelines` and `PipelineRuns`
+### `Pipelines`和`PipelineRuns`中的`工作区`
 
-A `Pipeline` can use `Workspaces` to show how storage will be shared through
-its `Tasks`. For example, `Task` A might clone a source repository onto a `Workspace`
-and `Task` B might compile the code that it finds in that `Workspace`. It's
-the `Pipeline's` job to ensure that the `Workspace` these two `Tasks` use is the
-same, and more importantly, that the order in which they access the `Workspace` is
-correct.
+`Pipeline`可以使用`工作区`来在属于它的`Tasks`之间共享存储。例如，`Task`可以克隆源代码仓储到一个`工作区`，然后另一个`Task`可以从`工作区`中编译代码。`Pipeline's`保证两个`Tasks`使用相同的工作区，更重要的时，采用正确的顺序来访问工作区.
 
-`PipelineRuns` perform mostly the same duties as `TaskRuns` - they provide the
-specific `Volume` information to use for the `Workspaces` used by each `Pipeline`.
-`PipelineRuns` have the added responsibility of ensuring that whatever `Volume` type they
-provide can be safely and correctly shared across multiple `Tasks`.
+`PipelineRuns`处理方式与`TaskRuns`一样 —— 它们提供特定的`Volume`信息来让每一个`Pipeline`使用`工作区`.
+`PipelineRuns`另外的职责是确保无论何种类型的`Volume`都可以在`Tasks`间安全和正确的共享.
 
-## Configuring `Workspaces`
+## 配置`工作区`
 
-This section describes how to configure one or more `Workspaces` in a `TaskRun`.
+本节描述如何在`TaskRun`中配置一个或多个`工作区`.
 
-### Using `Workspaces` in `Tasks`
+### 在`Tasks`中使用`工作区`
 
-To configure one or more `Workspaces` in a `Task`, add a `workspaces` list with each entry using the following fields:
+要在`Task`中配置一个或多个`工作区`,添加一个`workspaces`，并指定包含以下字段的列表:
 
-- `name` -  (**required**) A **unique** string identifier that can be used to refer to the workspace
-- `description` - An informative string describing the purpose of the `Workspace`
-- `readOnly` - A boolean declaring whether the `Task` will write to the `Workspace`.
-- `mountPath` - A path to a location on disk where the workspace will be available to `Steps`. Relative
-  paths will be prepended with `/workspace`. If a `mountPath` is not provided the workspace
-  will be placed by default at `/workspace/<name>` where `<name>` is the workspace's
-  unique name.
+- `name` -  (**必须**) 一个 **唯一** 的字符串标识，通过它可以引用此工作区
+- `description` - 描述此工作区的信息
+- `readOnly` - 定义`Task`是否可写入此`工作区`.
+- `mountPath` - 工作区挂载的磁盘位置，`Steps`中可通过此路径访问。路径相对于`/workspace`，如果未指定`mountPath`，将会默认为`/workspace/<name>`，`<name>`为工作区唯一的名称.
   
-Note the following:
+注意:
   
-- A `Task` definition can include as many `Workspaces` as it needs. 
-- A `readOnly` `Workspace` will have its volume mounted as read-only. Attempting to write
-  to a `readOnly` `Workspace` will result in errors and failed `TaskRuns`.
-- `mountPath` can be either absolute or relative. Absolute paths start with `/` and relative paths
-  start with the name of a directory. For example, a `mountPath` of `"/foobar"` is  absolute and exposes
-  the `Workspace` at `/foobar` inside the `Task's` `Steps`, but a `mountPath` of `"foobar"` is relative and
-  exposes the `Workspace` at `/workspace/foobar`.
-    
-Below is an example `Task` definition that includes a `Workspace` called `messages` to which the `Task` writes a message:
+- `Task`可以包含多个`工作区`. 
+- `readOnly` `Workspace`将会通过read-only方式挂载，尝试写入只读工作区将导致`TaskRuns`失败.
+- `mountPath`可以是绝对路径或相对路径，绝对路径必须以`/`开始，相对路径开始于目录名称，例如， `mountPath` 为 `"/foobar"`是绝对路径，导出的工作区路径为`/foobar`，但是`mountPath` 为 `"foobar"`是相对路径，其实际路径为`/workspace/foobar`.
+
+以下`Task`示例包含一个名称为`messages`的`工作区`，`Task`将消息写入此位置:
 
 ```yaml
 spec:
@@ -112,38 +85,31 @@ spec:
     mountPath: /custom/path/relative/to/root
 ```
 
-#### Using `Workspace` variables in `Tasks`
+#### 在`TaskRuns`中使用`工作区`变量
 
-The following variables make information about `Workspaces` available to `Tasks`:
+`Tasks`中可通过以下变量获取`工作区`信息:
 
-- `$(workspaces.<name>.path)` - specifies the path to a `Workspace`
-   where `<name>` is the name of the `Workspace`.
-- `$(workspaces.<name>.volume)`- specifies the name of the `Volume`
-   provided for a `Workspace` where `<name>` is the name of the `Workspace`.
+- `$(workspaces.<name>.path)` - 工作区的路径，`<name>`是`工作区`的名称.
+- `$(workspaces.<name>.volume)`- 工作区的`Volume`，`<name>`是`工作区`的名称.
 
-#### Mapping `Workspaces` in `Tasks` to `TaskRuns`
+#### 映射`Tasks`中的`工作区`到`TaskRuns`
 
-A `TaskRun` that executes a `Task` containing a `workspaces` list must bind
-those `workspaces` to actual physical `Volumes`. To do so, the `TaskRun` includes
-its own `workspaces` list. Each entry in the list contains the following fields:
+`TaskRun`在执行包含`工作区`列表的`Task`时，必须将`工作区`绑定到真实的物理`Volumes`，由此，`TaskRun`包含自己的`workspaces`列表，每一项包含以下字段:
 
-- `name` - (**required**) The name of the `Workspace` within the `Task` for which the `Volume` is being provided
-- `subPath` - An optional subdirectory on the `Volume` to store data for that `Workspace`
+- `name` - (**必须**) `工作区`的名称
+- `subPath` - 可选的`Volume`中的子路径，这里面的数据将会挂载到`Workspace`
 
-The entry must also include one `VolumeSource`. See [Using `VolumeSources` with `Workspaces`](#specifying-volumesources-in-workspaces) for more information.
+项中也必须包含一个`VolumeSource`,参考[与`工作区`一起使用 `VolumeSources`](#specifying-volumesources-in-workspaces) 获取更多信息.
                
-**Caution:**
-- The `subPath` *must* exist on the `Volume` before the `TaskRun` executes or the execution will fail.
-- The `Workspaces` declared in a `Task` must be available when executing the associated `TaskRun`.
-  Otherwise, the `TaskRun` will fail.
+**注意:**
+-  在`TaskRun`执行之前，`subPath` *必须* 存在在`卷`中，否则`TaskRun`将会执行失败.
+- `工作区`必须在执行与`Task`关联的`TaskRun`之前有效，否则`TaskRun`将会失败.
 
-#### Examples of `TaskRun` definitions using `Workspaces`
+#### 使用`工作区`的`TaskRun`定义示例
 
-The following examples illustrate how to specify `Workspaces` in your `TaskRun` definition.
-For a more in-depth example, see [`Workspaces` in a `TaskRun`](../examples/v1beta1/taskruns/workspace.yaml).
+以下示例展示了如何在`TaskRun`中指定`工作区`,有关更多信息, 参考 [在`TaskRun`中的`工作区`](../examples/v1beta1/taskruns/workspace.yaml).
 
-In the example below, an existing `PersistentVolumeClaim` called `mypvc` is used for a Task's `workspace`
-called `myworkspace`. It exposes only the subdirectory `my-subdir` from that `PersistentVolumeClaim`:
+在以下示例中，存在一个名称为`PersistentVolumeClaim`的持久化存储声明，它被用于名称为`myworkspace`的`工作区`中，它只导出PVC中的`my-subdir`子目录:
 
 ```yaml
 workspaces:
@@ -153,8 +119,7 @@ workspaces:
   subPath: my-subdir
 ```
 
-In the example below, an [`emptyDir`](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)
-is provided for a Task's `workspace` called `myworkspace`:
+在以下示例中，提供一个[`emptyDir`](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)给任务的名称为`myworkspace`的`工作区`:
 
 ```yaml
 workspaces:
@@ -162,8 +127,7 @@ workspaces:
   emptyDir: {}
 ```
 
-In the example below, a `ConfigMap` named `my-configmap` is used for a `Workspace` 
-named `myworkspace` declared inside a `Task`:
+以下示例中，为`Task`中名称为`myworkspace`的工作区指定一个名称为`my-configmap`的配置映射:
 
 ```yaml
 workspaces:
@@ -172,8 +136,7 @@ workspaces:
     name: my-configmap
 ```
 
-In this example, a `Secret` named `my-secret` is used for a `Workspace` 
-named `myworkspace` declared inside a `Task`:
+以下示例，为`Task`中名称为`myworkspace`的工作区指定一个名称为`my-secret`的`密文`:
 
 ```yaml
 workspaces:
@@ -182,82 +145,63 @@ workspaces:
     secretName: my-secret
 ```
 
-For a more in-depth example, see [workspace.yaml](../examples/v1beta1/taskruns/workspace.yaml).
+有关更深入的示例，请参考[workspace.yaml](../examples/v1beta1/taskruns/workspace.yaml).
 
-### Using `Workspaces` in `Pipelines`
+### 在`Pipelines`中使用`工作区`
 
-While individual `Tasks` declare the `Workspaces` they need to run, the `Pipeline` decides
-which `Workspaces` are shared among its `Tasks`. To declare shared `Workspaces` in a `Pipeline`,
-you must add the following information to your `Pipeline` definition:
+独立的`Tasks`定义其运行所需`工作区`，`Pipeline`决定需要在其`Tasks`之间共享的工作区。要定义共享的工作区，你必须在`Pipeline`中定义以下信息:
 
-- A list of `Workspaces` that your `PipelineRuns` will be providing. Use the `workspaces` field to
-  specify the target `Workspaces` in your `Pipeline` definition as shown below. Each entry in the
-  list must have a unique name.
-- A mapping of `Workspace` names between the `Pipeline` and the `Task` definitions.
+- 需要由`PipelineRuns`提供的工作区列表，使用`workspaces`字段定义工作区列表，列表中每一项具有唯一的名称.
+- 映射`Pipeline`与`Task`中工作区名称的映射.
 
-The example below defines a `Pipeline` with a single `Workspace` named `pipeline-ws1`. This
-`Workspace` is bound in two `Tasks` - first as the `output` workspace declared by the `gen-code`
-`Task`, then as the `src` workspace declared by the `commit` `Task`. If the `Workspace`
-provided by the `PipelineRun` is a `PersistentVolumeClaim` then these two `Tasks` can share
-data within that `Workspace`.
+以下示例定义了一个具有一个工作区的`Pipeline`，名称为`pipeline-ws1`.此工作区绑定到了两个`Tasks` —— 第一个`gen-code`任务作为`输出`工作区，然后作为第二个`commit`任务的`src`
+工作区. 如果`PipelineRun`提供了`PersistentVolumeClaim`作为工作区，则可在`Task`之间共享数据.
 
 ```yaml
 spec:
   workspaces:
-    - name: pipeline-ws1 # Name of the workspace in the Pipeline
+    - name: pipeline-ws1 # Pipeline中的工作区名称
   tasks:
     - name: use-ws-from-pipeline
       taskRef:
-        name: gen-code # gen-code expects a workspace named "output"
+        name: gen-code # gen-code 任务指定工作区名称为"output"
       workspaces:
         - name: output
           workspace: pipeline-ws1
     - name: use-ws-again
       taskRef:
-        name: commit # commit expects a workspace named "src"
+        name: commit # commit 任务中工作区名称为 "src"
       workspaces:
         - name: src
           workspace: pipeline-ws1
       runAfter:
-        - use-ws-from-pipeline # important: use-ws-from-pipeline writes to the workspace first
+        - use-ws-from-pipeline # 重要: 实现执行use-ws-from-pipeline任务来写入数据
 ```
 
-#### Specifying `Workspace` order in a `Pipeline`
+#### 在`Pipeline`中指定`工作区`顺序
 
-Sharing a `Workspace` between `Tasks` requires you to define the order in which those `Tasks`
-will be accessing that `Workspace` since different classes of storage have different limits
-for concurrent reads and writes. For example, a `PersistentVolumeClaim` might only allow a
-single `Task` writing to it at once.
+在`Tasks`之间共享一个`工作区`需要你定义这些`Tasks`访问`工作区`的顺序，因为不同的存储类具有不同的并发读写的限制. 例如，`PersistentVolumeClaim`可能只允许一个`Task`写入一次.
 
-**Warning:** You *must* ensure that this order is correct. Incorrectly ordering can result
-in a deadlock where multiple `Task` `Pods` are attempting to mount a `PersistentVolumeClaim`
-for writing at the same time, which would cause the `Tasks` to time out.
+**警告:** 你 *必须* 确保顺序的正确性，不正确的顺序可能导致死锁，比如在多个`Task` `Pods`同时尝试挂载一个`PersistentVolumeClaim`来在同一时间写入时，这将导致`Tasks`超时.
 
-To define this order, use the `runAfter` field in your `Pipeline` definition. For more
-information, see the [`runAfter` documentation](pipelines.md#runAfter).
+要定义顺序，在`Pipeline`定义中使用`runAfter`字段，更多信息，参见[`runAfter` 文档](pipelines.md#runAfter).
 
-#### Specifying `Workspaces` in `PipelineRuns`
+#### 在`PipelineRuns`中指定`工作区`
 
-For a `PipelineRun` to execute a `Pipeline` that includes one or more `Workspaces`, it needs to
-bind the `Workspace` names to physical volumes using its own `workspaces` field. Each entry in
-this list must correspond to a `Workspace` declaration in the `Pipeline`. Each entry in the
-`workspaces` list must specify the following:
+要使用`PipelineRun`运行一个包含`工作区`的`Pipeline`，必须先将工作区绑定到真实的物理卷，这可以通过`PipelineRun` `workspaces`字段来设置工作区列表，列表中每一项包含以下字段:
 
-- `name` - (**required**) the name of the `Workspace` specified in the `Pipeline` definition for which a volume is being provided.
-- `subPath` - (optional) a directory on the volume that will store that `Workspace's` data. This directory must exist at the
-  time the `TaskRun` executes, otherwise the execution will fail.
+- `name` - (**必须**) `Pipeline`中定义的`工作区`名称.
+- `subPath` - (可选) 卷中的子路径，该路径中存储工作区需要使用的数据，该路径必须存在，否则`TaskRun`将执行失败.
 
-The entry must also include one `VolumeSource`. See [Using `VolumeSources` with `Workspaces`](#specifying-volumesources-in-workspaces) for more information.
+项中必须包含一种`VolumeSource`，参考[与`工作区`一起使用`VolumeSources`](#specifying-volumesources-in-workspaces).
 
-**Note:** If the `Workspaces` specified by a `Pipeline` are not provided at runtime by a `PipelineRun`, that `PipelineRun` will fail.
+**注意:** 如果`Pipeline`中定义的工作区，在`PipelineRun`中未绑定，`PipelineRun`将会失败.
 
-#### Example `PipelineRun` definitions using `Workspaces`
+#### 使用`工作区`的`PipelineRun`定义示例
 
-The examples below illustrate how to specify `Workspaces` in your `PipelineRuns`. For a more in-depth example, see the
-[`Workspaces` in `PipelineRun`](../examples/v1beta1/pipelineruns/workspaces.yaml) YAML sample.
+以下示例阐述了如何在`PipelineRuns`中指定工作区，更深入的示例请参考[`PipelineRun`中的工作区](../examples/v1beta1/pipelineruns/workspaces.yaml) YAML 示例.
 
-In the example below, an existing `PersistentVolumeClaim` named `mypvc` is used for a `Workspace`
-named `myworkspace` declared in a `Pipeline`. It exposes only the subdirectory `my-subdir` from that `PersistentVolumeClaim`: 
+在以下示例中，存在一个名称为`mypvc`的`PersistentVolumeClaim`，用于名称为`myworkspace`的工作区，它只导出了`mypvc`中的`my-subdir`子路径: 
 
 ```yaml
 workspaces:
@@ -267,8 +211,7 @@ workspaces:
   subPath: my-subdir
 ```
 
-In the example below, a `ConfigMap` named `my-configmap` is used for a  `Workspace`
-named `myworkspace` declared in a `Pipeline`:
+以下示例中, 将名称为`my-configmap`的`配置映射`用于`Pipeline`中定义的名称为`myworkspace`的工作区中:
 
 ```yaml
 workspaces:
@@ -277,8 +220,7 @@ workspaces:
     name: my-configmap
 ```
 
-In the example below, a `Secret` named `my-secret` is used for a `Workspace`
-named `myworkspace` declared in a `Pipeline`:
+以下示例中, 将名称为`my-secret`的`密文`用于`Pipeline`中定义的名称为`myworkspace`的工作区中:
 
 ```yaml
 workspaces:
@@ -287,52 +229,50 @@ workspaces:
     secretName: my-secret
 ```
 
-### Specifying `VolumeSources` in `Workspaces`
+### 在`Workspaces`中指定`VolumeSources`
 
-You can only use a single type of `VolumeSource` per `Workspace` entry. The configuration
-options differ for each type. `Workspaces` support the following fields:
+你在每一个工作区中可使用一种类型的`VolumeSource`. 每一种类型具有不同的配置项`Workspaces` 支持以下字段:
 
 #### `emptyDir`
 
-The `emptyDir` field references an [`emptyDir` volume](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) which holds
-a temporary directory that only lives as long as the `TaskRun` that invokes it. `emptyDir` volumes are **not** suitable for sharing data among `Tasks` within a `Pipeline`.
-However, they work well for single `TaskRuns` where the data stored in the `emptyDir` needs to be shared among the `Steps` of the `Task` and discarded after execution.
+
+`emptyDir` 字段指向[`emptyDir` 卷](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) ，它存储`TaskRun`运行的临时数据. `emptyDir` 卷**不** 适合于在管道任务之间共享数据.
+但是，它适用于在`TaskRuns`内部步骤之间共享数据.
 
 #### `persistentVolumeClaim`
 
-The `persistentVolumeClaim` field references an existing [`persistentVolumeClaim` volume](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim).
-`PersistentVolumeClaim` volumes are a good choice for sharing data among `Tasks` within a `Pipeline`.
+`persistentVolumeClaim`指向[`persistentVolumeClaim`卷](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim).
+`PersistentVolumeClaim`卷是在`Pipeline`中`Tasks`之间共享数据的好选择.
 
 #### `volumeClaimTemplate`
 
-The `volumeClaimTemplate` is a template of a [`persistentVolumeClaim` volume](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim), created for each `PipelineRun` or `TaskRun`. 
-When the volume is created from a template in a `PipelineRun` or `TaskRun` it will be deleted when the `PipelineRun` or `TaskRun` is deleted.
-`volumeClaimTemplate` volumes are a good choice for sharing data among `Tasks` within a `Pipeline` when the volume is only used during a `PipelineRun` or `TaskRun`.
+`volumeClaimTemplate`是[`persistentVolumeClaim`卷](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim)的模版, 为每一个`PipelineRun`或者`TaskRun`创建，由`PipelineRun`或`TaskRun`从模版创建的PVC，将在`PipelineRun`或`TaskRun`删除后被删除.
+
+当需要在运行`PipelineRun`或`TaskRun`时共享数据时，`volumeClaimTemplate`卷是好的选择.
 
 #### `configMap`
 
-The `configMap` field references a [`configMap` volume](https://kubernetes.io/docs/concepts/storage/volumes/#configmap).
-Using a `configMap` as a `Workspace` has the following limitations:
+`configMap`指向[`configMap`卷](https://kubernetes.io/docs/concepts/storage/volumes/#configmap).
+使用`configMap`作为工作区，具有以下限制:
 
-- `configMap` volume sources are always mounted as read-only. `Steps` cannot write to them and will error out if they try.
-- The `configMap` you want to use as a `Workspace` must exist prior to submitting the `TaskRun`.
-- `configMaps` are [size-limited to 1MB](https://github.com/kubernetes/kubernetes/blob/f16bfb069a22241a5501f6fe530f5d4e2a82cf0e/pkg/apis/core/validation/validation.go#L5042).
+- `configMap`卷总是只读，步骤不能进行写入.
+- `configMap`指定的配置映射必须在`TaskRun`运行时存在.
+- `configMaps`[最大不超过1MB](https://github.com/kubernetes/kubernetes/blob/f16bfb069a22241a5501f6fe530f5d4e2a82cf0e/pkg/apis/core/validation/validation.go#L5042).
 
 #### `secret`
 
-The `secret` field references a [`secret` volume](https://kubernetes.io/docs/concepts/storage/volumes/#secret).
-Using a `secret` volume has the following limitations:
+`secret`字段指向[`secret`卷](https://kubernetes.io/docs/concepts/storage/volumes/#secret).
+使用`secret`卷作为工作区，具有以下限制:
 
-- `secret` volume sources are always mounted as read-only. `Steps` cannot write to them and will error out if they try.
-- The `secret` you want to use as a `Workspace` must exist prior to submitting the `TaskRun`.
-- `secret` are [size-limited to 1MB](https://github.com/kubernetes/kubernetes/blob/f16bfb069a22241a5501f6fe530f5d4e2a82cf0e/pkg/apis/core/validation/validation.go#L5042).
+- `secret`卷总是只读，步骤不能进行写入.
+- `secret`指定的密文必须在`TaskRun`运行时存在.
+- `secret`[最大不超过1MB](https://github.com/kubernetes/kubernetes/blob/f16bfb069a22241a5501f6fe530f5d4e2a82cf0e/pkg/apis/core/validation/validation.go#L5042).
 
-If you need support for a `VolumeSource` type not listed above, [open an issue](https://github.com/tektoncd/pipeline/issues) or
-a [pull request](https://github.com/tektoncd/pipeline/blob/master/CONTRIBUTING.md).
+如果你需要一个目前尚未存在的`VolumeSource`类型, 可在github上[提交需求](https://github.com/tektoncd/pipeline/issues) 或者 [pull request](https://github.com/tektoncd/pipeline/blob/master/CONTRIBUTING.md).
 
-## More examples
+## 更多示例
 
-See the following in-depth examples of configuring `Workspaces`:
+以下包含有关配置`工作区`的更详细的示例:
 
-- [`Workspaces` in a `TaskRun`](../examples/v1beta1/taskruns/workspace.yaml)
-- [`Workspaces` in a `PipelineRun`](../examples/v1beta1/pipelineruns/workspaces.yaml)
+- [`TaskRun`中的工作区](../examples/v1beta1/taskruns/workspace.yaml)
+- [`PipelineRun`中的工作区](../examples/v1beta1/pipelineruns/workspaces.yaml)
