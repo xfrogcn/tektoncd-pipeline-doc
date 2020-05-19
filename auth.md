@@ -4,35 +4,26 @@ linkTitle: "Authentication"
 weight: 7
 ---
 -->
-# Authentication
+# 认证
 
-This document defines how authentication is provided during execution of a
-`TaskRun` or a `PipelineRun` (referred to as `Runs` in this document).
+本文档定义在执行`TaskRun`或`PipelineRun`期间是如何提供认证的(参考本文档的`Runs`).
 
-The build system supports two types of authentication, using Kubernetes'
-first-class `Secret` types:
+构建系统支持两种类型的认证，通过使用Kubernetes的`Secret`类型:
 
 - `kubernetes.io/basic-auth`
 - `kubernetes.io/ssh-auth`
 
-Secrets of these types can be made available to the `Run` by attaching them to
-the `ServiceAccount` as which it runs.
+这些类型的密文可以通过附加到`ServiceAccount`的方式传递到`Run`.
 
-## Exposing credentials
+## 导出凭证
 
-In their native form, these secrets are unsuitable for consumption by Git and
-Docker. For Git, they need to be turned into (some form of) `.gitconfig`. For
-Docker, they need to be turned into a `~/.docker/config.json` file. Also, while
-each of these supports has multiple credentials for multiple domains, those
-credentials typically need to be blended into a single canonical keyring.
+按照原有格式，这些密文是无法适用于Git及Docker场景的，对于Git，它们需要转换为`.gitconfig`配置文件，对于Docker，它们需要转换为`~/.docker/config.json`文件，而这些支持具有多个凭证并应用了多个场景中，这些凭证通常需要混合在一个规范的密钥环中.
 
-To solve this, before any `PipelineResources` are retrieved, all `pods` execute
-a credential initialization process that accesses each of its secrets and
-aggregates them into their respective files in `$HOME`.
+为了解决此问题，在`PipelineResources`被使用之前，所有`pods`执行一个凭证初始化进程，通过此进程访问它相关的密文并将其转换到`$HOME`下不同的文件中.
 
-## SSH authentication (Git)
+## SSH 认证 (Git)
 
-1. Define a `Secret` containing your SSH private key (in `secret.yaml`):
+1. 定义一个 `Secret`，包含你的SSH私有秘钥(`secret.yaml`):
 
    ```yaml
    apiVersion: v1
@@ -40,51 +31,47 @@ aggregates them into their respective files in `$HOME`.
    metadata:
      name: ssh-key
      annotations:
-       tekton.dev/git-0: github.com # Described below
+       tekton.dev/git-0: github.com # 详见下面描述
    type: kubernetes.io/ssh-auth
    data:
      ssh-privatekey: <base64 encoded>
-     # This is non-standard, but its use is encouraged to make this more secure.
+     # 这是非标准的，但是可以增强安全性.
      known_hosts: <base64 encoded>
    ```
 
-   `tekton.dev/git-0` in the example above specifies which web address these
-   credentials belong to. See
-   [Guiding Credential Selection](#guiding-credential-selection) below for more
-   information.
+   `tekton.dev/git-0` 在上述示例中指定凭证所属于哪个网站地址，参考
+   [凭证选择指南](#凭证选择指南) 了解详细信息.
 
-1. Generate the value of `ssh-privatekey` by copying the value of (for example)
-   `cat ~/.ssh/id_rsa | base64`.
+1. 通过拷贝（示例）`cat ~/.ssh/id_rsa | base64`内容来获取`ssh-privatekey`的值.
 
-1. Copy the value of `cat ~/.ssh/known_hosts | base64` to the `known_hosts`
-   field.
+1. 通过拷贝`cat ~/.ssh/known_hosts | base64`的内容作为`known_hosts`字段的值.
 
-1. Next, direct a `ServiceAccount` to use this `Secret` (in
+1. 接下来, 通过`ServiceAccount`来使用此`Secret` (
    `serviceaccount.yaml`):
 
-   ```yaml
-   apiVersion: v1
-   kind: ServiceAccount
-   metadata:
-     name: build-bot
-   secrets:
-     - name: ssh-key
-   ```
+    ```yaml
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: build-bot
+    secrets:
+      - name: ssh-key
+    ```
 
-1. Then use that `ServiceAccount` in your `TaskRun` (in `run.yaml`):
+1. 然后在`TaskRun`中使用`ServiceAccount`(`run.yaml`):
 
-```yaml
-apiVersion: tekton.dev/v1beta1
-kind: TaskRun
-metadata:
-  name: build-push-task-run-2
-spec:
-  serviceAccountName: build-bot
-  taskRef:
-    name: build-push
-```
+    ```yaml
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      name: build-push-task-run-2
+    spec:
+      serviceAccountName: build-bot
+      taskRef:
+        name: build-push
+    ```
 
-1. Or use that `ServiceAccount` in your `PipelineRun` (in `run.yaml`):
+1. 或者在`PipelineRun`中使用`ServiceAccount`(`run.yaml`):
 
    ```yaml
    apiVersion: tekton.dev/v1beta1
@@ -98,20 +85,17 @@ spec:
        name: demo-pipeline
    ```
 
-1. Execute the `Run`:
+1. 执行`Run`:
 
    ```shell
    kubectl apply --filename secret.yaml serviceaccount.yaml run.yaml
    ```
 
-When the `Run` executes, before steps execute, a `~/.ssh/config` will be
-generated containing the key configured in the `Secret`. This key is then used
-to authenticate when retrieving any `PipelineResources`.
+当`Run`执行时，在步骤执行之前，`~/.ssh/config`文件将会被自动生成，包含`Secret`的配置内容. 这个键将会被用于处理`PipelineResources`资源.
 
-## Basic authentication (Git)
+## 基本认证 (Git)
 
-1. Define a `Secret` containing the username and password that the `Run` should
-   use to authenticate to a Git repository (in `secret.yaml`):
+1. 定义一个`Secret`，包含`Run`所需要的用于认证Git仓库的用户名和密码(`secret.yaml`):
 
    ```yaml
    apiVersion: v1
@@ -119,19 +103,17 @@ to authenticate when retrieving any `PipelineResources`.
    metadata:
      name: basic-user-pass
      annotations:
-       tekton.dev/git-0: https://github.com # Described below
+       tekton.dev/git-0: https://github.com # 详见下面描述
    type: kubernetes.io/basic-auth
    stringData:
      username: <username>
      password: <password>
    ```
 
-   `tekton.dev/git-0` in the example above specifies which web address these
-   credentials belong to. See
-   [Guiding Credential Selection](#guiding-credential-selection) below for more
-   information.
+   `tekton.dev/git-0` 在上述示例中指定凭证所属于哪个网站地址，参考
+   [凭证选择指南](#凭证选择指南) 了解详细信息.
 
-1. Next, direct a `ServiceAccount` to use this `Secret` (in
+1. 接下来, 通过`ServiceAccount`来使用`Secret` (
    `serviceaccount.yaml`):
 
    ```yaml
@@ -143,7 +125,7 @@ to authenticate when retrieving any `PipelineResources`.
      - name: basic-user-pass
    ```
 
-1. Then use that `ServiceAccount` in your `TaskRun` (in `run.yaml`):
+1. 然后在`TaskRun`中使用`ServiceAccount`(`run.yaml`):
 
    ```yaml
    apiVersion: tekton.dev/v1beta1
@@ -156,7 +138,7 @@ to authenticate when retrieving any `PipelineResources`.
        name: build-push
    ```
 
-1. Or use that `ServiceAccount` in your `PipelineRun` (in `run.yaml`):
+1. 或者在`PipelineRun`中使用`ServiceAccount`(`run.yaml`):
 
    ```yaml
    apiVersion: tekton.dev/v1beta1
@@ -170,21 +152,17 @@ to authenticate when retrieving any `PipelineResources`.
        name: demo-pipeline
    ```
 
-1. Execute the `Run`:
+1. 执行`Run`:
 
    ```shell
    kubectl apply --filename secret.yaml serviceaccount.yaml run.yaml
    ```
 
-When this `Run` executes, before steps execute, a `~/.gitconfig` will be
-generated containing the credentials configured in the `Secret`, and these
-credentials are then used to authenticate when retrieving any
-`PipelineResources`.
+当以上`Run`执行时，在执行具体步骤之前，`~/.gitconfig`文件将会根据`Secret`配置自动生成，然后这个凭证将在使用`PipelineResources`资源时被使用.
 
-## Basic authentication (Docker)
+## 基本认证 (Docker)
 
-1. Define a `Secret` containing the username and password that the build should
-   use to authenticate to a Docker registry (in `secret.yaml`):
+1. 定义一个`Secret`,包含构建时Docker仓库认证需要的用户名和密码(`secret.yaml`):
 
    ```yaml
    apiVersion: v1
@@ -192,19 +170,17 @@ credentials are then used to authenticate when retrieving any
    metadata:
      name: basic-user-pass
      annotations:
-       tekton.dev/docker-0: https://gcr.io # Described below
+       tekton.dev/docker-0: https://gcr.io # 详见下面描述
    type: kubernetes.io/basic-auth
    stringData:
      username: <username>
      password: <password>
    ```
 
-   `tekton.dev/docker-0` in the example above specifies which web address these
-   credentials belong to. See
-   [Guiding Credential Selection](#guiding-credential-selection) below for more
-   information.
+   `tekton.dev/docker-0` 在上述示例中指定凭证所属于哪个网站地址，参考
+   [凭证选择指南](#凭证选择指南) 了解详细信息.
 
-1. Next, direct a `ServiceAccount` to use this `Secret` (in
+1. 接下来, 定义`ServiceAccount`来使用此`Secret` (
    `serviceaccount.yaml`):
 
    ```yaml
@@ -216,7 +192,7 @@ credentials are then used to authenticate when retrieving any
      - name: basic-user-pass
    ```
 
-1. Then use that `ServiceAccount` in your `TaskRun` (in `run.yaml`):
+1. 然后在`TaskRun`中使用此`ServiceAccount` (`run.yaml`):
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -229,7 +205,7 @@ spec:
     name: build-push
 ```
 
-1. Or use that `ServiceAccount` in your `PipelineRun` (in `run.yaml`):
+1. 或者在`PipelineRun`中使用`ServiceAccount`(`run.yaml`):
 
    ```yaml
    apiVersion: tekton.dev/v1beta1
@@ -243,26 +219,20 @@ spec:
        name: demo-pipeline
    ```
 
-1. Execute the `Run`:
+1. 执行`Run`:
 
    ```shell
    kubectl apply --filename secret.yaml serviceaccount.yaml run.yaml
    ```
 
-When the `Run` executes, before steps execute, a `~/.docker/config.json` will be
-generated containing the credentials configured in the `Secret`, and these
-credentials are then used to authenticate when retrieving any
-`PipelineResources`.
+当执行`Run`时，在执行具体步骤之前，将先通过`Secret`配置自动产生`~/.docker/config.json` Docker配置文件，然后在使用具体`PipelineResources`资源时自动使用这些凭证.
 
-## Kubernetes's Docker registry's secret
+## Kubernetes Docker仓库密文
 
-Kubernetes defines two types of secrets for Docker registries :
-the old format `kubernetes.io/dockercfg` and the new
-`kubernetes.io/dockerconfigjson`. Tekton supports those secrets in
-addition to the one described above.
+Kubernetes为Docker仓库提供两种类型的密文: 旧的`kubernetes.io/dockercfg`格式及新的`kubernetes.io/dockerconfigjson`格式，Tekton同时支持这些密文.
 
-1. Define a `Secret` from a Docker client configuration file, as documented in
-   [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
+1. 从Docker客户端配置文件定义一个, 可参考文档
+   [从私有仓库中拉取镜像](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
 
    ```bash
    kubectl create secret generic regcred \
@@ -270,7 +240,7 @@ addition to the one described above.
     --type=kubernetes.io/dockerconfigjson
    ```
 
-1. Instruct a `ServiceAccount` to use this `Secret`:
+1. 通过`ServiceAccount`使用此`Secret`:
 
    ```yaml
    apiVersion: v1
@@ -281,7 +251,7 @@ addition to the one described above.
      - name: regcred
    ```
 
-1. Use that `ServiceAccount` in your `TaskRun`:
+1. 在`TaskRun`中使用`ServiceAccount`:
 
    ```yaml
    apiVersion: tetkon.dev/v1beta1
@@ -294,28 +264,19 @@ addition to the one described above.
      ...
    ```
 
-1. Execute the build:
+1. 执行构建:
 
    ```shell
    kubectl apply --filename secret.yaml --filename serviceaccount.yaml --filename taskrun.yaml
    ```
 
-When this TaskRun executes, before the steps are getting executed, a
-`~/.docker/config.json` will be generated containing the credentials
-configured in the `Secret`, and these credentials are then used to
-authenticate with the Docker registry.
+当此TaskRun执行时，在具体步骤执行之前，将通过`Secret`配置自动生成`~/.docker/config.json`文件，此文件将用于Docker仓库的认证.
 
-If both `kubernetes.io/*` and tekton flavored basic authentication secret are
-provided, tekton will merge the credentials from those two ; tekton flavored
-credentials taking precedence over `kubernetes.io/dockerconfigjson` (or
-`kubernetes.io/dockercfg`) ones.
+如果`kubernetes.io/*`及tekton基础认证密文被同时提供，tekton将合并它们，tekton风格凭证将优先于`kubernetes.io/dockerconfigjson`(或`kubernetes.io/dockercfg`).
 
-## Guiding credential selection
+## 凭证选择指南
 
-A `Run` might require many different types of authentication. For instance, a
-`Run` might require access to multiple private Git repositories, and access to
-many private Docker repositories. You can use annotations to guide which secret
-to use to authenticate to different resources, for example:
+一个`Run`可能需要多种不同的认证类型，例如，一个`Run`可能需要访问多个私有Git仓库，多个私有Docker仓库，你可以使用标注来指定那个密文应该使用到那个资源，例如:
 
 ```yaml
 apiVersion: v1
@@ -331,11 +292,9 @@ stringData:
   password: <cleartext non-encoded>
 ```
 
-This describes a "Basic Auth" (username and password) secret that should be used
-to access Git repos at github.com and gitlab.com, as well as Docker repositories
-at gcr.io.
+以上定义一个`基础认证`(用户名和密码)密文将会用于访问github.com及gitlab.com上的git仓库，以及gcr.io Docker镜像仓库.
 
-Similarly, for SSH:
+同样地, 对于SSH:
 
 ```yaml
 apiVersion: v1
@@ -346,24 +305,22 @@ metadata:
 type: kubernetes.io/ssh-auth
 data:
   ssh-privatekey: <base64 encoded>
-  # This is non-standard, but its use is encouraged to make this more secure.
-  # Omitting this results in the use of ssh-keyscan (see below).
+  # 非标准，但是设置后可增强安全性.
+  # 省略将会导致使用ssh-keyscan(参考下面).
   known_hosts: <base64 encoded>
 ```
 
-This describes an SSH key secret that should be used to access Git repos at
-github.com only.
+此SSH密文定义表示只应用于github.com的Git仓库.
 
-Credential annotation keys must begin with `tekton.dev/docker-` or
-`tekton.dev/git-`, and the value describes the URL of the host with which to use
-the credential.
+凭证注释的键必须开始于 `tekton.dev/docker-` 或者
+`tekton.dev/git-`, 值为使用凭证的URL域名.
 
-## Implementation details
+## 实现细节
 
 ### Docker `basic-auth`
 
-Given URLs, usernames, and passwords of the form: `https://url{n}.com`,
-`user{n}`, and `pass{n}`, generate the following for Docker:
+设定URL，用户名和密码，值为: `https://url{n}.com`,
+`user{n}`, and `pass{n}`, 产生的Docker配置文件如下:
 
 ```json
 === ~/.docker/config.json ===
@@ -382,13 +339,12 @@ Given URLs, usernames, and passwords of the form: `https://url{n}.com`,
 }
 ```
 
-Docker doesn't support `kubernetes.io/ssh-auth`, so annotations on these types
-are ignored.
+Docker不支持`kubernetes.io/ssh-auth`密文，所以此类型的注释将会被忽略.
 
 ### Git `basic-auth`
 
-Given URLs, usernames, and passwords of the form: `https://url{n}.com`,
-`user{n}`, and `pass{n}`, generate the following for Git:
+设定URL，用户名，密码，值为: `https://url{n}.com`,
+`user{n}`, and `pass{n}`, 产生如下Git配置文件:
 
 ```
 === ~/.gitconfig ===
@@ -407,8 +363,8 @@ https://user2:pass2@url2.com
 
 ### Git `ssh-auth`
 
-Given hostnames, private keys, and `known_hosts` of the form: `url{n}.com`,
-`key{n}`, and `known_hosts{n}`, generate the following for Git:
+设定宿主域名, 私有秘钥，以及`known_hosts`，值为: `url{n}.com`,
+`key{n}`, and `known_hosts{n}`, 产生的Git配置文件如下:
 
 ```
 === ~/.ssh/id_key1 ===
@@ -430,23 +386,14 @@ Host url2.com
 ...
 ```
 
-Note: Because `known_hosts` is a non-standard extension of
-`kubernetes.io/ssh-auth`, when it is not present this will be generated through
-`ssh-keygen url{n}.com` instead.
+注意: 由于 `known_hosts` 是一个非标准的`kubernetes.io/ssh-auth`扩展，当没有指定此字段时，将会通过`ssh-keygen url{n}.com`来替代.
 
-### Least privilege
+### 最少特权
 
-The secrets as outlined here will be stored into `$HOME` (by convention the
-volume: `/tekton/home`), and will be available to `Source` and all `Steps`.
+这里所描述的密文将会被存储到`$HOME`路径下（惯例指向`/tekton/home`目录），在所有`Source`和`Steps`中有效.
 
-For sensitive credentials that should not be made available to some steps, do
-not use the mechanisms outlined here. Instead, the user should declare an
-explicit `Volume` from the `Secret` and manually `VolumeMount` it into the
-`Step`.
+对于敏感凭证，它可能不能透传给某些步骤，那么请避免使用此文描述的机制，而应该选择从`密文`挂载`卷`，并手动挂载到指定的步骤.
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
