@@ -4,107 +4,103 @@ linkTitle: "Variable Substitutions"
 weight: 15
 ---
 -->
-# Variable Substitutions
+# 变量替换
 
-This doc aggregates the complete set of variable substitions available
-in `Tasks` and `Pipelines`.
+本文档主要介绍`Tasks`及`Pipelines`中详细的变量替换功能.
 
-## Variables Available in a Pipeline
+## Pipeline中有效的变量
 
-| Variable | Description |
+| 变量  | 描述 |
 | -------- | ----------- |
-| `params.<param name>` | The value of the param at runtime. |
-| `tasks.<task name>.results.<result name>` | The value of a Task's result (**Note**: Affects Task ordering in a Pipeline!) |
+| `params.<param name>` | 运行时参数具体的值. |
+| `tasks.<task name>.results.<result name>` | 任务结果值 (**注意**: 与Task在管道中的顺序有关!) |
 
-## Variables Available in a Task
+## Task中的有效变量
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `params.<param name>` | The value of the param at runtime. |
-| `resources.inputs.<resource name>.path` | The path to the input resource's directory. |
-| `resources.outputs.<resource name>.path` | The path to the output resource's directory. |
-| `results.<result name>.path` | The path to the file where a Task's result should be written. |
-| `workspaces.<workspace name>.path` | The path to the mounted workspace. |
-| `workspaces.<workspace name>.volume` | The name of the volume populating the workspace. |
-| `credentials.path` | The path to the location of credentials written by the `creds-init` init container. |
+| `params.<param name>` | 运行时参数具体的值. |
+| `resources.inputs.<resource name>.path` | 输入资源的路径. |
+| `resources.outputs.<resource name>.path` | 输出资源的路径. |
+| `results.<result name>.path` | 任务结果需要保存到的具体文件路径. |
+| `workspaces.<workspace name>.path` | 挂载的工作区的路径. |
+| `workspaces.<workspace name>.volume` | 工作区对应卷的名称. |
+| `credentials.path` | 由`creds-init`初始化容器写入凭证的路径位置. |
 
-### PipelineResource Variables
+### 管道资源变量
 
-Each PipelineResource exposes its own set of variables. Below the variables are grouped by
-PipelineResource type. These are available in `Tasks`.
-
-Each variable is accessible via `resources.inputs.<resource name>.<variable name>` or
+每一种类型的管道资源导出一些列的变量，以下按照管道资源类型来进行说明，这些资源在`Tasks`中有效，每个变量可以通过以下方式访问 `resources.inputs.<resource name>.<variable name>` 或者
 `resources.outputs.<resource name>.<variable name>`.
 
-#### Git PipelineResource
+#### Git 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源的名称 |
 | `type` | `"git"` |
-| `url` | The URL to the Git repo |
-| `revision` | The revision to be checked out. |
-| `depth` | The integer value of the resource's `depth` param. |
-| `sslVerify` | The value of the resource's `sslVerify` param: `"true"` or `"false"`. |
-| `httpProxy` | The value of the resource's `httpProxy` param. |
-| `httpsProxy` | The value of the resource's `httpsProxy` param. |
-| `noProxy` | The value of the resource's `noProxy` param. |
+| `url` | Git仓库的url地址 |
+| `revision` | 签出的版本号. |
+| `depth` | 资源`depth`参数，整数. |
+| `sslVerify` | 资源的 `sslVerify` 参数: `"true"` 或者 `"false"`. |
+| `httpProxy` | 资源的 `httpProxy` 参数. |
+| `httpsProxy` | 资源的 `httpsProxy` 参数. |
+| `noProxy` | 资源的 `noProxy` 参数. |
 
-#### PullRequest PipelineResource
+#### PullRequest 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源的名称 |
 | `type` | `"pullRequest"` |
-| `url` | The URL pointing to the pull request. |
-| `provider` | `"github"` or `"gitlab"`. |
-| `insecure-skip-tls-verify` | The value of the resource's `insecure-skip-tls-verify` param: `"true"` or `"false"`. |
+| `url` | pull request的url地址. |
+| `provider` | `"github"` 或者 `"gitlab"`. |
+| `insecure-skip-tls-verify` | 资源的 `insecure-skip-tls-verify` 参数: `"true"` 或者 `"false"`. |
 
-#### Image PipelineResource
+#### Image 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源名称 |
 | `type` | `"image"` |
-| `url` | The complete path to the image. |
-| `digest` | The image's digest. |
+| `url` | 镜像的完整路径. |
+| `digest` | 镜像的摘要. |
 
-#### GCS PipelineResource
+#### GCS 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源名称 |
 | `type` | `"gcs"` |
-| `location` | The location of the blob storage. |
+| `location` | blob 存储的位置. |
 
-#### BuildGCS PipelineResource
+#### BuildGCS 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源名称 |
 | `type` | `"build-gcs"` |
-| `location` | The location of the blob storage. |
+| `location` | blob 存储的位置. |
 
-#### Cluster PipelineResource
+#### Cluster 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源名称 |
 | `type` | `"cluster"` |
-| `url` | Host url of the master node. |
-| `username` | The user with access to the cluster. |
-| `password` | The password to be used for clusters with basic auth. |
-| `namespace` | The namespace to target in the cluster. |
-| `token` | Bearer token. |
-| `insecure` | Whether TLS connection to server should be verified: `"true"` or `"false"`. |
-| `cadata` | Stringified PEM-encoded bytes typically read from a root certificates bundle. |
-| `clientKeyData` | Stringified PEM-encoded bytes from a client key file for TLS. |
-| `clientCertificateData` | Stringified PEM-encoded bytes from a client cert file for TLS. |
+| `url` | 主节点的宿主域名. |
+| `username` | 访问集群的用户. |
+| `password` | 访问集群的密码. |
+| `namespace` | 集群的目标命名空间. |
+| `token` | Bearer 令牌. |
+| `insecure` | 是否TLS连接验证: `"true"` 或者 `"false"`. |
+| `cadata` | 从根证书读取的字符串化的PEM编码字节. |
+| `clientKeyData` | TLS客户端秘钥文件字符串化后的PEM编码. |
+| `clientCertificateData` | TLS客户端证书文件字符串化后的PEM编码. |
 
-#### CloudEvent PipelineResource
+#### CloudEvent 管道资源
 
-| Variable | Description |
+| 变量 | 描述 |
 | -------- | ----------- |
-| `name` | The resource's name |
+| `name` | 资源名称 |
 | `type` | `"cloudEvent"` |
-| `target-uri` | The URI that will be hit with cloud event payloads. |
+| `target-uri` | 云事件负载对应的URI. |
