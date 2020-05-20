@@ -4,54 +4,46 @@ linkTitle: "Conditions"
 weight: 11
 ---
 -->
-# Conditions
+# 条件
 
-This document defines `Conditions` and their capabilities.
+本文档描述`Conditions`及其能力.
 
 ---
 
-- [Syntax](#syntax)
-  - [Check](#check)
-  - [Parameters](#parameters)
-  - [Resources](#resources)
-- [Labels](#labels)
-- [Examples](#examples)
+- [语法](#语法)
+  - [检查](#检查)
+  - [参数](#参数)
+  - [资源](#资源)
+- [标签](#标签)
+- [示例](#示例)
 
-## Syntax
+## 语法
 
-To define a configuration file for a `Condition` resource, you can specify the
-following fields:
+要定义`Condition`资源的配置文件，你可设置以下字段:
 
-- Required:
-  - [`apiVersion`][kubernetes-overview] - Specifies the API version, for example
+- 必须:
+  - [`apiVersion`][kubernetes-overview] - API 版本, 例如
     `tekton.dev/v1alpha1`.
-  - [`kind`][kubernetes-overview] - Specify the `Condition` resource object.
-  - [`metadata`][kubernetes-overview] - Specifies data to uniquely identify the
-    `Condition` resource object, for example a `name`.
-  - [`spec`][kubernetes-overview] - Specifies the configuration information for
-    your `Condition` resource object. In order for a `Condition` to do anything,
-    the spec must include:
-    - [`check`](#check) - Specifies a container that you want to run for evaluating the condition
-    - [`description`](#description) - Description of the Condition.
+  - [`kind`][kubernetes-overview] - 设定为`Condition`资源对象.
+  - [`metadata`][kubernetes-overview] - 设定`Condition`资源对象的元数据, 例如`名称（name）`.
+  - [`spec`][kubernetes-overview] - 设置`Condition`资源对象的配置信息，以便于让`Condition`做相应的事情，包括:
+    - [`check`](#check) - 设定一个用于运行评估条件的容器
+    - [`description`](#description) - 条件的描述.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
 
-### Check
+### 检查
 
-The `check` field is required. You define a single check to define the body of a `Condition`. The 
-check must specify a [`Step`](./tasks.md#steps). The container image runs till completion. The container 
-must exit successfully i.e. with an exit code 0 for the condition evaluation to be successful. All other 
-exit codes are considered to be a condition check failure.
+检查 `check` 字段是必须的，你需要定义一个单独的check来定义`Condition`的内容, check必须指定一个 [`Step`](./tasks.md#定义-Steps). 镜像容器执行至完成，容器必须成功地退出，例如退出代码为0,表示条件评估成功，其他退出码表示条件检查失败.
 
-### Description
+### 描述
 
-The `description` field is an optional field and can be used to provide description of the Condition.
+描述`description`字段是可选字段，用于描述条件.
 
-### Parameters
+### 参数
 
-A Condition can declare parameters that must be supplied to it during a PipelineRun. Sub-fields
-within the check field can access the parameter values using the templating syntax:
+可以为条件定义参数，这些参数必须在PipelineRun中提供. check下的字段可以通过模板语法访问这些参数:
 
 ```yaml
 spec:
@@ -62,36 +54,27 @@ spec:
     image: $(params.image)
 ```
 
-Parameters name are limited to alpha-numeric characters, `-` and `_` and can
-only start with alpha characters and `_`. For example, `fooIs-Bar_` is a valid
-parameter name, `barIsBa$` or `0banana` are not.
- 
-Each declared parameter has a type field, assumed to be string if not provided by the user. 
-The other possible type is array — useful, for instance, checking that a pushed branch name doesn't match any of 
-multiple protected branch names. When the actual parameter value is supplied, its parsed type 
-is validated against the type field.
+参数名称必须由数字、字符以及`-` 和 `_`组成，并且只能以字符或`_`开始。例如，`fooIs-Bar_`是有效名称，`barIsBa$`或者`0banana`是无效的.
 
-### Resources
+每一个定义的参数具有类型字段，如果没有设置将默认为字符串类型.
+其他可选的类型为数组(array) - 非常有用, 例如，检查推送的分支名称不匹配多个被保护的分支名称. 当实际的参数值被提供时，将会按照提供类型解析与验证.
 
-Conditions can declare input [`PipelineResources`](resources.md)  via the `resources` field to 
-provide the Condition container step with data or context that is needed to perform the check.
+### 资源
 
-Resources in Conditions work similar to the way they work in `Tasks` i.e. they can be accessed using
-[variable substitution](./resources.md#variable-substitution) and the `targetPath` field can be used
-to [control where the resource is mounted](./resources.md#controlling-where-resources-are-mounted)
+条件可以通过`resources`字段定义输入[`管道资源`](resources.md)，以便于条件容器步骤获取对应的数据或上下文来处理检查.
 
-## Labels
+在条件中的资源与`Tasks`中的使用方式一致，例如可以使用
+[变量替换](./resources.md#变量替换) 以及 `targetPath` 字段来[控制资源挂载的位置](./resources.md#控制资源挂载位置)
 
-[Labels](labels.md) defined as part of the `Condition` metadata will be automatically propagated to the `Pod`.
+## 标签
 
-## Examples
+[标签](labels.md) 作为`Condition`元数据的一部分来定义，将会自动传递给`Pod`.
 
-For complete examples, see
-[the examples folder](https://github.com/tektoncd/pipeline/tree/master/examples).
+## 示例
+
+查看完整的示例，请参考
+[示例目录](https://github.com/tektoncd/pipeline/tree/master/examples).
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
