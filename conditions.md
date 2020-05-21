@@ -27,7 +27,7 @@ weight: 11
   - [`kind`][kubernetes-overview] - 设定为`Condition`资源对象.
   - [`metadata`][kubernetes-overview] - 设定`Condition`资源对象的元数据, 例如`名称（name）`.
   - [`spec`][kubernetes-overview] - 设置`Condition`资源对象的配置信息，以便于让`Condition`做相应的事情，包括:
-    - [`check`](#check) - 设定一个用于运行评估条件的容器
+    - [`check`](#检查) - 设定一个用于运行评估条件的容器
     - [`description`](#description) - 条件的描述.
 
 [kubernetes-overview]:
