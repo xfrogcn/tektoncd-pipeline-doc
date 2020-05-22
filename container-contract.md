@@ -4,32 +4,19 @@ linkTitle: "Container Contracts"
 weight: 8
 ---
 -->
-# Container Contract
+# 容器规范
 
-Each container image used as a step in a [`Task`](tasks.md) must comply with a
-specific contract.
+每一个用于[`Task`](tasks.md) 步骤中的容器都需要符合特定的标准和规范.
 
-## Entrypoint
+## 入口
 
-When containers are run in a `Task`, the `entrypoint` of the container will be
-overwritten with a custom binary that ensures the containers within the `Task`
-pod are executed in the specified order. As such, it is always recommended to
-explicitly specify a command.
+当`Task`中的容器运行时，容器的`entrypoint`将会被自定义的运行库所替代，以便于`Task` pod中的容器按照指定的顺序运行. 所以，这建议总是设置一个指定的命令..
 
-When `command` is not explicitly set, the controller will attempt to lookup the
-entrypoint from the remote registry. If the image is a private registry, the
-service account should include an
+当`command`没有被显式设置时，控制器将会尝试从远端仓库中查询入口, 如果镜像是私有仓库，服务账户应该包含一个
 [ImagePullSecret](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account).
-The Tekton controller will use the `ImagePullSecret` of the service account, and
-if service account is empty, `default` is assumed. Next is falling back to
-docker config added in a `.docker/config.json` at `$HOME/.docker/config.json`.
-If none of these credentials are available the controller will try to lookup the
-image anonymously.
+Tekton控制器将会使用服务账户中的`ImagePullSecret`，如果服务账户为空，将会假设为`default`账户。 接下来将会将docker配置添加到`.docker/config.json`在`$HOME/.docker/config.json`路径下，如果所有这些凭证都无效，控制器将会尝试匿名方式来访问镜像仓库.
 
-For example, in the following Task with the images,
-`gcr.io/cloud-builders/gcloud` and `gcr.io/cloud-builders/docker`, the
-entrypoint would be resolved from the registry, resulting in the tasks running
-`gcloud` and `docker` respectively.
+例如，以下任务使用`gcr.io/cloud-builders/gcloud` 和 `gcr.io/cloud-builders/docker`镜像，入口将会从仓库解析，结果任务将执行`gcloud`和`docker`命令.
 
 ```yaml
 spec:
@@ -40,7 +27,7 @@ spec:
       command: [docker]
 ```
 
-However, if the steps specified a custom `command`, that is what would be used.
+但是，如果步骤指定了`命令（command）`，那将会使用指定的命令.
 
 ```yaml
 spec:
@@ -52,7 +39,7 @@ spec:
         - echo "Hello!"
 ```
 
-You can also provide `args` to the image's `command`:
+你也可以通过`args`指定镜像`命令`的参数:
 
 ```yaml
 steps:
@@ -66,7 +53,4 @@ steps:
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
