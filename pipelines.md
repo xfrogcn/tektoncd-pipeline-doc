@@ -4,72 +4,58 @@ linkTitle: "Pipelines"
 weight: 3
 ---
 -->
-# Pipelines
+# 管道
 
-- [Overview](#pipelines)
-- [Configuring a `Pipeline`](#configuring-a-pipeline)
-  - [Specifying `Resources`](#specifying-resources)
-  - [Specifying `Workspaces`](#specifying-workspaces)
-  - [Specifying `Parameters`](#specifying-parameters)
-  - [Adding `Tasks` to the `Pipeline`](#adding-tasks-to-the-pipeline)
-    - [Using the `from` parameter](#using-the-from-parameter)
-    - [Using the `runAfter` parameter](#using-the-runafter-parameter)
-    - [Using the `retries` parameter](#using-the-retries-parameter)
-    - [Specifying execution `Conditions`](#specifying-execution-conditions)
-    - [Configuring the failure timeout](#configuring-the-failure-timeout)
-    - [Configuring execution results at the `Task` level](#configuring-execution-results-at-the-task-level)
-  - [Configuring execution results at the `Pipeline` level](#configuring-execution-results-at-the-pipeline-level)
-  - [Configuring the `Task` execution order](#configuring-the-task-execution-order)
-  - [Adding a description](#adding-a-description)
-  - [Code examples](#code-examples)
+- [概览](#管道)
+- [配置`Pipeline`](#配置Pipeline)
+  - [指定 `Resources`](#指定-Resources)
+  - [指定 `Workspaces`](#指定-Workspaces)
+  - [指定 `Parameters`](#指定-Parameters)
+  - [添加 `Tasks` 到 `Pipeline`](#添加-Tasks-到-Pipeline)
+    - [使用 `from` 参数](#使用-from-参数)
+    - [使用 `runAfter` 参数](#使用-runAfter-参数)
+    - [使用 `retries` 参数](#使用-retries-参数)
+    - [指定执行条件 `Conditions`](#指定执行条件-Conditions)
+    - [配置失败超时时间](#配置失败超时时间)
+    - [在`Task`级别配置执行结果](#在Task级别配置执行结果)
+  - [在`Pipeline`级别配置执行结果](#在Pipeline级别配置执行结果)
+  - [配置`Task`执行顺序](#配置Task执行顺序)
+  - [添加描述](#添加描述)
+  - [代码示例](#代码示例)
 
-## Overview
+## 概览
 
-A `Pipeline` is a collection of `Tasks` that you define and arrange in a specific order
-of execution as part of your continuous integration flow. Each `Task` in a `Pipeline`
-executes as a `Pod` on your Kubernetes cluster. You can configure various execution
-conditions to fit your business needs.
+`Pipeline`包含一系列排列为指定顺序的`Tasks`，通过它来执行持续集成流. 在`Pipeline`中的每一个`Task`作为`Pod`在你的Kubernetes集群中运行. 你可以配置多个条件来满足你的业务需求.
 
-## Configuring a `Pipeline`
+## 配置`Pipeline`
 
-A `Pipeline` definition supports the following fields:
+`Pipeline`定义支持以下字段:
 
-- Required:
-  - [`apiVersion`][kubernetes-overview] - Specifies the API version, for example
+- 必须:
+  - [`apiVersion`][kubernetes-overview] - API版本, 例如
     `tekton.dev/v1beta1`.
-  - [`kind`][kubernetes-overview] - Identifies this resource object as a `Pipeline` object.
-  - [`metadata`][kubernetes-overview] - Specifies metadata that uniquely identifies the
-    `Pipeline` object. For example, a `name`.
-  - [`spec`][kubernetes-overview] - Specifies the configuration information for
-    this `Pipeline` object. This must include: 
-    - [`tasks`](#adding-tasks-to-the-pipeline) - Specifies the `Tasks` that comprise the `Pipeline`
-      and the details of their execution.
-- Optional:
-  - [`resources`](#specifying-resources) - **alpha only** Specifies
-    [`PipelineResources`](resources.md) needed or created by the `Tasks` comprising the `Pipeline`.
-  - [`tasks`](#adding-tasks-to-the-pipeline):
+  - [`kind`][kubernetes-overview] - 定义资源对象类型，固定为 `Pipeline`.
+  - [`metadata`][kubernetes-overview] - `Pipeline`对象相关的元数据，例如名称`name`.
+  - [`spec`][kubernetes-overview] - `Pipeline对象的配置信息, 它包括: 
+    - [`tasks`](#添加-Tasks-到-Pipeline) - 指定`Task`，它构成了`Pipeline`的执行流程与功能.
+- 可选:
+  - [`resources`](#指定-Resources) - **alpha** 指定组成`Pipeline`的`Tasks`所需要的
+    [`PipelineResources`](resources.md) .
+  - [`tasks`](#添加-Tasks-到-Pipeline):
       - `resources.inputs` / `resource.outputs`
-        - [`from`](#using-the-from-parameter) - Indicates the data for a [`PipelineResource`](resources.md)
-          originates from the output of a previous `Task`.
-      - [`runAfter`](#using-the-runafter-parameter) - Indicates that a `Task`
-        should execute after one or more other `Tasks` without output linking.
-      - [`retries`](#using-the-retries-parameter) - Specifies the number of times to retry the
-        execution of a `Task` after a failure. Does not apply to execution cancellations.
-      - [`conditions`](#specifying-execution-conditions) - Specifies `Conditions` that only allow a `Task`
-        to execute if they evaluate to `true`.
-      - [`timeout`](#configuring-the-failure-timeout) - Specifies the timeout before a `Task` fails. 
-  - [`results`](#configuring-execution-results-at-the-pipeline-level) - Specifies the location to which
-    the `Pipeline` emits its execution results.
-  - [`description`](#adding-a-description) - Holds an informative description of the `Pipeline` object.
+        - [`from`](#使用-from-参数) - 指定[`PipelineResource`](resources.md)的数据来源于之前`Task`的输出.
+      - [`runAfter`](#使用-runAfter-参数) - 指定一个`Task`应该在某个或多个其他`Task`之后执行.
+      - [`retries`](#使用-retries-参数) - 当错误发生后，`Task`可重试的次数. 而不会取消任务执行.
+      - [`conditions`](#指定执行条件-Conditions) - 指定任务执行的`条件`,当评估结果为`true`时才执行任务.
+      - [`timeout`](#配置失败超时时间) - `Task`失败前的超时时间. 
+  - [`results`](#在Pipeline级别配置执行结果) - 指定`Pipeline`执行结果存放的位置.
+  - [`description`](#添加描述) - `Pipeline`对象的描述信息.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
 
-## Specifying `Resources`
-
-A `Pipeline` requires [`PipelineResources`](resources.md) to provide inputs and store outputs
-for the `Tasks` that comprise it. You can declare those in the `resources` field in the `spec`
-section of the `Pipeline` definition. Each entry requires a unique `name` and a `type`. For example:
+## 指定 `Resources`
+`Pipeline`使用[`PipelineResources`](resources.md)来为组成它的`Task`提供输入或存储输出，你可以通过`spec`下的`resources`字段来定义，其中的每一项资源中必须指定唯一的`name`及其`type`。例如:
 
 ```yaml
 spec:
@@ -80,64 +66,54 @@ spec:
       type: image
 ```
 
-## Specifying `Workspaces`
+## 指定 `Workspaces`
 
-`Workspaces` allow you to specify one or more volumes that each `Task` in the `Pipeline`
-requires during execution. You specify one or more `Workspaces` in the `workspaces` field.
-For example:
+`工作区`允许你为`Pipeline`中每一个`Task`指定在其执行期间所需的一个或多个卷. 你可以通过`workspaces`字段指定一个或多个`工作区`.
+例如:
 
 ```yaml
 spec:
   workspaces:
-    - name: pipeline-ws1 # The name of the workspace in the Pipeline
+    - name: pipeline-ws1 # Pipeline中工作区的名称
   tasks:
     - name: use-ws-from-pipeline
       taskRef:
-        name: gen-code # gen-code expects a workspace with name "output"
+        name: gen-code # gen-code包含一个名称为`output`的工作区
       workspaces:
         - name: output
           workspace: pipeline-ws1
     - name: use-ws-again
       taskRef:
-        name: commit # commit expects a workspace with name "src"
+        name: commit # commit包含一个名称为`src`的工作区
       runAfter:
-        - use-ws-from-pipeline # important: use-ws-from-pipeline writes to the workspace first
+        - use-ws-from-pipeline # 重要: use-ws-from-pipeline任务首先需要写入工作区
       workspaces:
         - name: src
           workspace: pipeline-ws1
 ```
 
-For more information, see:
-- [Using `Workspaces` in `Pipelines`](workspaces.md#using-workspaces-in-pipelines)
-- The [`Workspaces` in a `PipelineRun`](../examples/v1beta1/pipelineruns/workspaces.yaml) code example
+有关更多信息, 参考:
+- [在`Pipelines`中使用`工作区`](workspaces.md#在Pipelines中使用工作区)
+- [`PipelineRun`中的工作区](../examples/v1beta1/pipelineruns/workspaces.yaml)代码示例
 
-## Specifying `Parameters`
+## 指定-Parameters
 
-You can specify global parameters, such as compilation flags or artifact names, that you want to supply
-to the `Pipeline` at execution time. `Parameters` are passed to the `Pipeline` from its corresponding
-`PipelineRun` and can replace template values specified within each `Task` in the `Pipeline`.
+你可以指定需要在`Pipeline`执行时传递的全局参数，如编译标识或者制品名称. `参数`通过`PipelineRun`传递给`Pipeline`，可替换`Pipeline`中每一个`Task`的模板值.
 
-Parameter names:
-- Must only contain alphanumeric characters, hyphens (`-`), and underscores (`_`).
-- Must begin with a letter or an underscore (`_`).
+参数名称:
+- 必须只能使用字符或数字，及连字符(`-`)或下划线(`_`).
+- 必须以字母或下划线开始(`_`).
 
-For example, `fooIs-Bar_` is a valid parameter name, but `barIsBa$` or `0banana` are not.
+例如, `fooIs-Bar_`是有效的参数名称, 但 `barIsBa$` 或者 `0banana` 无效.
 
-Each declared parameter has a `type` field, which can be set to either `array` or `string`.
-`array` is useful in cases where the number of compiliation flags being supplied to the `Pipeline`
-varies throughout its execution. If no value is specified, the `type` field defaults to `string`.
-When the actual parameter value is supplied, its parsed type is validated against the `type` field.
-The `description` and `default` fields for a `Parameter` are optional.
+每一个定义的参数包含一个`type`字段，它可以设置为`array`或者`字符串`. `array`可用于传递`Pipeline`中所需要的多个编译标识，如果未指定`type`字段，默认为`string`. 当应用实际的参数值时，将会验证`type`值. 参数的`description`及`default`字段是可选的.
 
-The following example illustrates the use of `Parameters` in a `Pipeline`. 
+以下示例展示了如何在`Pipeline`中使用`Parameters`. 
 
-The following `Pipeline` declares an input parameter called `context` and passes its
-value to the `Task` to set the value of the `pathToContext` parameter within the `Task`.
-If you specify a value for the `default` field and invoke this `Pipeline` in a `PipelineRun`
-without specifying a value for `context`, that value will be used.
+以下`Pipeline`定义了一个输入参数，名称为`context`，然后传递值到`Task`，以便于设置`Task`中的`pathToContext`参数.
+如果你设置了`default`字段，然后在调用`Pipeline`的`PipelineRun`中未设置值，那么将会使用此默认值.
 
-**Note:** Input parameter values can be used as variables throughout the `Pipeline`
-by using [variable substitution](variables.md#variables-available-in-a-pipeline).
+**注意:** 输入参数值在整个`Pipeline`中可作为变量使用，通过[变量替换](variables.md#Pipeline中有效的变量)的方式.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -161,7 +137,7 @@ spec:
           value: "$(params.context)"
 ```
 
-The following `PipelineRun` supplies a value for `context`:
+以下`PipelineRun`提供了`context`参数的值:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -176,11 +152,10 @@ spec:
       value: "/workspace/examples/microservices/leeroy-web"
 ```
 
-## Adding `Tasks` to the `Pipeline`
+## 添加 `Tasks` 到 `Pipeline`
 
- Your `Pipeline` definition must reference at least one [`Task`](tasks.md).
-Each `Task` within a `Pipeline` must have a [valid](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-`name` and a `taskRef`. For example:
+`Pipeline`定义中必须引用至少一个[`Task`](tasks.md).
+`Pipeline`中的每一个`Task`必须具有一个[有效](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)的`name`以及`taskRef`。例如:
 
 ```yaml
 tasks:
@@ -189,8 +164,7 @@ tasks:
       name: build-push
 ```
 
-You can use [`PipelineResources`](#specifying-resources) as inputs and outputs for `Tasks`
-in the `Pipeline`. For example:
+你可以使用[`PipelineResources`](#指定-Resources)作为`Tasks`的输入和输出。例如:
 
 ```yaml
 spec:
@@ -207,7 +181,7 @@ spec:
             resource: my-image
 ```
 
-You can also provide [`Parameters`](tasks.md#specifying-parameters):
+你也可以为任务提供[`参数`](tasks.md#详述-Parameters):
 
 ```yaml
 spec:
@@ -222,20 +196,11 @@ spec:
           value: /workspace/examples/microservices/leeroy-web
 ```
 
-### Using the `from` parameter
+### 使用 `from` 参数
 
-If a `Task` in your `Pipeline` needs to use the output of a previous `Task`
-as its input, use the optional `from` parameter to specify a list of `Tasks`
-that must execute **before** the `Task` that requires their outputs as its 
-input. When your target `Task` executes, only the version of the desired 
-`PipelineResource` produced by the last `Task` in this list is used. The
-`name` of this output `PipelineReource` output must match the `name` of the
-input `PipelineResource` specified in the `Task` that ingests it. 
+如果`Pipeline`中的一个`Task`需要使用之前的`Task`的输出作为它的输入，可使用`from`参数来指定一个`Tasks`列表，指明这边任务必须在目标任务执行**之前**执行。当你的目标任务执行时，只有任务列表中最后一个`Task`输出的结果`PipelineResource`被使用。此输出`PipelineResource`的名称必须与目标`Task`输入`PipelineResource`名称一致. 
 
-In the example below, the `deploy-app` `Task` ingests the output of the `build-app`
-`Task` named `my-image` as its input.  Therefore, the `build-app` `Task` will 
-execute before the `deploy-app` `Task` regardless of the order in which those
-`Tasks` are declared in the `Pipeline`.
+在以下示例中，`deploy-app` `Task`使用`build-app`任务名称为`my-image`资源的输出作为其输入.  因此, `build-app` `Task`将会在`deploy-app` `Task`之前执行，而不管任务在`Pipeline`中的顺序.
 
 ```yaml
 - name: build-app
@@ -256,17 +221,11 @@ execute before the `deploy-app` `Task` regardless of the order in which those
           - build-app
 ```
 
-### Using the `runAfter` parameter
+### 使用 `runAfter` 参数
 
-If you need your `Tasks` to execute in a specific order within the `Pipeline`
-but they don't have resource dependencies that require the `from` parameter,
-use the `runAfter` parameter to indicate that a `Task` must execute after
-one or more other `Tasks`.
+如果你需要`Pipeline`中的任务按照指定的顺序执行，而没有需要通过`from`参数指定的依赖资源，可使用`runAfter`参数来指定任务需要在一个或多个其他`Task`之后执行.
 
-In the example below, we want to test the code before we build it. Since there
-is no output from the `test-app` `Task`, the `build-app` `Task` uses `runAfter`
-to indicate that `test-app` must run before it, regardless of the order in which
-they are referenced in the `Pipeline` definition.
+在以下示例中，我们需要在构建之前先进行代码测试。由于构建任务不会使用`test-app`任务的任何输出，所以`build-app`任务使用`runAfter`来指定`test-app`必须在之前运行，而不管任务在`Pipeline`中的实际顺序.
 
 ```yaml
 - name: test-app
@@ -287,22 +246,13 @@ they are referenced in the `Pipeline` definition.
         resource: my-repo
 ```
 
-### Using the `retries` parameter
+### 使用 `retries` 参数
 
-For each `Task` in the `Pipeline`, you can specify the number of times Tekton
-should retry its execution when it fails. When a `Task` fails, the corresponding
-`TaskRun` sets its `Succeeded` `Condition` to `False`. The `retries` parameter
-instructs Tekton to retry executing the `Task` when this happens.
+在`Pipeline`中的每一个`Task`，你可以指定Tekton在任务失败后可以自动重试的次数. 当`Task`失败了， 其关联的`TaskRun`将会设置`成功` `条件`为`False`. `retries`参数命令Tekton在此条件发生时重试.
 
-If you expect a `Task` to encounter problems during execution (for example,
-you know that there will be issues with network connectivitity or missing
-dependencies), set its `retries` parameter to a suitable value greater than 0.
-If you don't explicitly specify a value, Tekton does not attempt to execute
-the failed `Task` again.
+如果你知道`Task`在执行过程中可能会有些问题（例如，你可能知道有一些网络连接问题或者依赖丢失），那么你可以将`retries`参数值设置为大于0的数。如果你没有设置此参数，Tekton不会在`Task`失败时进行重试的尝试。.
 
-In the example below, the execution of the `build-the-image` `Task` will be
-retried once after a failure; if the retried execution fails, too, the `Task`
-execution fails as a whole.
+在以下示例中，`build-the-image` `Task`将会在失败后重试一次，如果重试失败，`Task`执行将会失败.
 
 ```yaml
 tasks:
@@ -312,14 +262,9 @@ tasks:
       name: build-push
 ```
 
-### Specifying execution `Conditions`
+### 指定执行条件 `Conditions`
 
-Sometimes you will need to run tasks only when some conditions are true. The `conditions` field
-allows you to list a series of references to [`Conditions`](./conditions.md) that are run before the task
-is run. If all of the conditions evaluate to true, the task is run. If any of the conditions are false,
-the Task is not run. Its status.ConditionSucceeded is set to False with the reason set to  `ConditionCheckFailed`.
-However, unlike regular task failures, condition failures do not automatically fail the entire pipeline
-run -- other tasks that are not dependent on the task (via `from` or `runAfter`) are still run.
+有时你只需要在某些条件满足时才执行任务，`condition`字段允许你应用一系列的[`条件`](./conditions.md)，这些条件在任务执行前运行，如果所有的条件评估为true，任务将会运行，如果其中任何一个条件返回false，任务将不会被执行。此时status.ConditionSucceeded被设置为`ConditionCheckFailed`, 不过，与其他任务失败不同的是，条件失败不会自动导致整个管道失败 -- 其它不依赖于此任务的任务(通过`from`或者`runAfter`)将会持续运行.
 
 ```yaml
 tasks:
@@ -336,13 +281,9 @@ tasks:
             resource: source-repo
 ```
 
-In this example, `my-condition` refers to a [Condition](conditions.md) custom resource. The `build-push`
-task will only be executed if the condition evaluates to true.
+在此示例中，`my-condition`引用一个[条件](conditions.md)自定义资源. `build-push`任务将会在条件评估为true时执行.
 
-Resources in conditions can also use the [`from`](#using-the-from-parameter) field to indicate that they
-expect the output of a previous task as input. As with regular Pipeline Tasks, using `from`
-implies ordering --  if task has a condition that takes in an output resource from
-another task, the task producing the output resource will run first:
+条件中的资源同样可以使用[`from`](#使用-from-参数) 字段来使用之前任务的输出作为条件的输入资源. 就像Pipeline中的任务一样，通过`from`会影响任务执行顺序 -- 如果一个条件需要另外一个任务的输出，那么产生资源的任务将会首先被执行:
 
 ```yaml
 tasks:
@@ -364,16 +305,14 @@ tasks:
       name: echo-hello
 ```
 
-### Configuring the failure timeout
+### 配置失败超时时间
 
-You can use the `Timeout` field in the `Task` spec within the `Pipeline` to set the timeout
-of the `TaskRun` that executes that `Task` within the `PipelineRun` that executes your `Pipeline.`
-The `Timeout` value is a `duration` conforming to Go's [`ParseDuration`](https://golang.org/pkg/time/#ParseDuration)
-format. For example, valid values are `1h30m`, `1h`, `1m`, and `60s`. 
+你可以通过`Pipeline`中的`Task`配置下的`Timeout`参数来设置执行`Pipeline`关联的`PipelineRun`中通过`TaskRun`来执行具体`Task`的超时时间。
+`超时时间`值是一个Go语言的`duration`格式，可参考[`ParseDuration`](https://golang.org/pkg/time/#ParseDuration), 有效值为`1h30m`, `1h`, `1m`, 以及 `60s`.  
 
-**Note:** If you do not specify a `Timeout` value, Tekton instead honors the timeout for the [`PipelineRun`](pipelineruns.md#configuring-a-pipelinerun).
+**注意:** 如果你没有设置`Timeout`值，Tekton将使用[`PipelineRun`](pipelineruns.md#configuring-a-pipelinerun)超时替代.
 
-In the example below, the `build-the-image` `Task` is configured to time out after 90 seconds:
+在以下示例中，`build-the-image` `Task`任务配置的超时时间为90秒:
 
 ```yaml
 spec:
@@ -384,15 +323,11 @@ spec:
       Timeout: "0h1m30s"
 ```
 
-### Configuring execution results at the `Task` level
+### 在Task级别配置执行结果
 
-Tasks can emit [`Results`](tasks.md#storing-execution-results) while they execute. You can
-use these `Results` values as parameter values in subsequent `Tasks` within your `Pipeline`
-through [variable substitution](variables.md#variables-available-in-a-pipeline). Tekton infers the
-`Task` order so that the `Task` emitting the referenced `Results` values executes before the
-`Task` that consumes them. 
+任务执行后可以产出[`Results`](tasks.md#存储执行结果)，你可以在`Pipeline`随后的`Task`中以参数的方式使用这些`结果`，通过[变量替换](variables.md#Pipeline中有效的变量), Tekton可推断`Task`的执行顺序，以便于在`Task`使用这些结果之前确保结果对应任务已被执行. 
 
-In the example below, the result of the `previous-task-name` `Task` is declared as `bar-result`:
+在以下示例中，`previous-task-name` `Task`任务结果作为`bar-result`公开:
 
 ```yaml
 params:
@@ -400,15 +335,13 @@ params:
     value: "$(tasks.previous-task-name.results.bar-result)"
 ```
 
-For an end-to-end example, see [`Task` `Results` in a `PipelineRun`](../examples/v1beta1/pipelineruns/task_results_example.yaml).
+请参考[`PipelineRun`中的任务结果](../examples/v1beta1/pipelineruns/task_results_example.yaml).
 
-## Configuring execution results at the `Pipeline` level
+## 在Pipeline级别配置执行结果
 
-You can configure your `Pipeline` to emit `Results` during its execution as references to
-the `Results` emitted by each `Task` within it. 
+你可以配置你的`Pipeline`来产出`结果`, 这些结果由管道中的`Task`所产生. 
 
-In the example below, the `Pipeline` specifies a `results` entry with the name `sum` that
-references the `Result` emitted by the `second-add` `Task`.
+在以下示例中，`Pipeline`指定了一个`results`项，名称为`sum`，它是由`second-add` `任务`所产生的.
 
 ```yaml
   results:
@@ -417,21 +350,19 @@ references the `Result` emitted by the `second-add` `Task`.
       value: $(tasks.second-add.results.sum)
 ```
 
-For an end-to-end example, see [`Results` in a `PipelineRun`](../examples/v1beta1/pipelineruns/pipelinerun-results.yaml).
+有关示例，可参考[`PipelineRun`中的结果](../examples/v1beta1/pipelineruns/pipelinerun-results.yaml).
 
-## Configuring the `Task` execution order
+## 配置`Task`执行顺序
 
-You can connect `Tasks` in a `Pipeline` so that they execute in a Directed Acyclic Graph (DAG).
-Each `Task` in the `Pipeline` becomes a node on the graph that can be connected with an edge
-so that one will run before another and the execution of the `Pipeline` progresses to completion
-without getting stuck in an infinite loop.
+你可以通过`Pipeline`来连接`Task`，所以他们的执行可以构成有向无环图(DAG).
+`Pipeline`中的每一个`Task`作为图中的一个节点，他们可以通过边连接起来，所以`Pipeline`可以处理完成而不会死循环.
 
-This is done using:
+这可通过使用:
 
-- [`from`](#using-the-from-parameter) clauses on the [`PipelineResources`](resources.md) used by each `Task`, and
-- [`runAfter`](#using-the-runafter-parameter) clauses on the corresponding `Tasks`.
+- [`from`](#使用-from-参数) 子句， 由每一个`Task`使用的[`PipelineResources`](resources.md), 以及
+- [`runAfter`](#使用-runAfter-参数) 子句.
 
-For example, the `Pipeline` defined as follows
+例如, 如下的`Pipeline`定义：
 
 ```yaml
 - name: lint-repo
@@ -487,7 +418,7 @@ For example, the `Pipeline` defined as follows
           - build-frontend
 ```
 
-executes according to the following graph:
+执行顺序图如下:
 
 ```none
         |            |
@@ -501,28 +432,21 @@ build-app  build-frontend
     deploy-all
 ```
 
-In particular:
+详细说明:
 
-1. The `lint-repo` and `test-app` `Tasks` have no `from` or `runAfter` clauses
-   and start executing simultaneously.
-2. Once `test-app` completes, both `build-app` and `build-frontend` start
-   executing simultaneously since they both `runAfter` the `test-app` `Task`.
-3. The `deploy-all` `Task` executes once both `build-app` and `build-frontend`
-   complete, since it ingests `PipelineResources` from both.
-4. The entire `Pipeline` completes execution once both `lint-repo` and `deploy-all`
-   complete execution.
+1. `lint-repo` 和 `test-app` `任务` 没有 `from` 或 `runAfter` 子句，他们将会被立即同时执行.
+2. 一旦 `test-app` 完成,  `build-app` 和 `build-frontend` 任务将会同时开始，因为他们都有`runAfter`子句，并指向`test-app`任务.
+3. `deploy-all` `任务`在`build-app` 和 `build-frontend`任务完成后执行，因为他会使用这两个任务的输出资源.
+4. 整个`Pipeline`将会在`lint-repo` 和 `deploy-all`任务完成时完成.
 
-## Adding a description
+## 添加描述
 
-The `description` field is an optional field and can be used to provide description of the `Pipeline`.
+`description`字段是可选字段，可通过此字段设置`Pipeline`的描述信息.
 
-## Code examples
+## 代码示例
 
-For a better understanding of `Pipelines`, study [our code examples](https://github.com/tektoncd/pipeline/tree/master/examples).
+为了更好地理解`Pipelines`, 可通过学习[我们的示例](https://github.com/tektoncd/pipeline/tree/master/examples).
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
