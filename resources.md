@@ -127,28 +127,13 @@ spec:
 
 ### 覆盖资源复制到的位置
 
-When specifying input and output `PipelineResources`, you can optionally specify
-`paths` for each resource. `paths` will be used by `TaskRun` as the resource's
-new source paths i.e., copy the resource from a specified list of paths.
-`TaskRun` expects the folder and contents to be already present in specified
-paths. The `paths` feature could be used to provide extra files or altered
-version of existing resources before the execution of steps.
+当指定输入和输出`管道资源`时，你可以选择设置每一个资源的`paths`。`paths`将会被`TaskRun`作为新的的源路径，例如，从一个指定的列表路径中拷贝资源。`TaskRun`期望文件夹和内容在指定路径下已经存在。`paths`功能可以提供额外的文件或者在执行步骤之前修改已存在的资源.
 
-The output resource includes the name and reference to the pipeline resource and
-optionally `paths`. `paths` will be used by `TaskRun` as the resource's new
-destination paths i.e., copy the resource entirely to specified paths. `TaskRun`
-will be responsible for the creation of required directories and content
-transition. The `paths` feature could be used to inspect the results of
-`TaskRun` after the execution of steps.
+输出资源包含名称来引用管道资源以及可选的`paths`。`paths`将会被用于`TaskRun`作为新的路径，例如拷贝资源到指定的路径。`TaskRun`将会负责创建必要的路径以及进行内容的传递. `paths`功能可以用来在`TaskRun`执行完成步骤后来获取其结果.
 
-`paths` feature for input and output resources is heavily used to pass the same
-version of resources across tasks in context of `PipelineRun`.
+对于输入和输出资源的`paths`功能常用于在`PipelineRun`里面的任务之间传递相同版本的资源.
 
-In the following example, `Task` and `TaskRun` are defined with an input
-resource, output resource and step, which builds a war artifact. After the
-execution of `TaskRun`(`volume-taskrun`), `custom` volume will have the entire
-resource `java-git-resource` (including the war artifact) copied to the
-destination path `/custom/workspace/`.
+在以下示例中，`Task`和`TaskRun`定义了一个输入资源，输出资源以及步骤，它将会编译一个war包。在`TaskRun`（`volume-taskrun`）执行之后，`custom`卷将包含完整的`java-git-resource`（包括war包）拷贝到目标路径`/custom/workspace/`.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -199,14 +184,11 @@ spec:
         emptyDir: {}
 ```
 
-### Resource Status
+### 资源状态
 
-When resources are bound inside a `TaskRun`, they can include extra information
-in the `TaskRun` Status.ResourcesResult field. This information can be useful
-for auditing the exact resources used by a `TaskRun` later. Currently the Image
-and Git resources use this mechanism.
+当资源绑定到`TaskRun`内后，它们将会在`TaskRun` Status.ResourcesResult字段中包含额外的信息。这个信息有助于随后的`TaskRun`审查准确的资源. 当前镜像以及Git资源使用了此机制.
 
-For an example of what this output looks like:
+有关此输出的示例如下:
 
 ```yaml
 resourcesResult:
@@ -216,15 +198,13 @@ resourcesResult:
     name: skaffold-image-leeroy-web
 ```
 
-### Description
+### 描述
 
-The `description` field is an optional field and can be used to provide description of the Resource.
+通过`description`字段可以设置对资源的描述，此字段是可选的.
 
-### Optional Resources
+### 可选资源
 
-By default, a resource is declared as mandatory unless `optional` is set to `true`
-for that resource. Resources declared as `optional` in a `Task` does not have be
-specified in `TaskRun`.
+默认情况下，资源是必须强制提供的，除非`optional`设置为`true`。在`Task`中定义为`optional`的资源，在`TaskRun`中可以不用指定.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -238,9 +218,7 @@ spec:
         type: git
         optional: true
 ```
-
-Similarly, resources declared as `optional` in a `Pipeline` does not have to be
-specified in `PipelineRun`.
+同样，在`Pipeline`中资源也可定义为`optional`，在`PipelineRun`中也可以不用指定.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -257,24 +235,20 @@ spec:
 ...
 ```
 
-You can refer to different examples demonstrating usage of optional resources in
-`Task`, `Condition`, and `Pipeline`:
+你可以从以下示例中查看`Task`、`Condition`、`Pipeline`中使用可选资源的说明:
 
 -   [Task](../examples/v1beta1/taskruns/optional-resources.yaml)
 -   [Cluster Task](../examples/v1beta1/taskruns/optional-resources-with-clustertask.yaml)
 -   [Condition](../examples/v1beta1/pipelineruns/conditional-pipelinerun-with-optional-resources.yaml)
 -   [Pipeline](../examples/v1beta1/pipelineruns/demo-optional-resources.yaml)
 
-## Resource Types
+## 资源类型
 
-### Git Resource
+### Git 资源
 
-The `git` resource represents a [git](https://git-scm.com/) repository, that
-contains the source code to be built by the pipeline. Adding the `git` resource
-as an input to a `Task` will clone this repository and allow the `Task` to
-perform the required actions on the contents of the repo.
+`git`资源来表示一个[git](https://git-scm.com/)仓库, 它包含管道需要构建的代码. 为`Task`添加`git` 资源，将会拷贝此仓库并允许`Task`执行必要的动作.
 
-To create a git resource using the `PipelineResource` CRD:
+通过`PipelineResource` CRD来创建git资源:
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -291,43 +265,28 @@ spec:
       value: master
 ```
 
-Params that can be added are the following:
+可以使用以下参数:
 
-1.  `url`: represents the location of the git repository, you can use this to
-    change the repo, e.g. [to use a fork](#using-a-fork)
-1.  `revision`: Git [revision][git-rev] (branch, tag, commit SHA or ref) to
-    clone. You can use this to control what commit [or branch](#using-a-branch)
-    is used. [git checkout][git-checkout] is used to switch to the
-    revision, and will result in a detached HEAD in most cases. Use refspec
-    along with revision if you want to checkout a particular branch without a
-    detached HEAD. _If no revision is specified, the resource will default to `master`._
-1.  `refspec`: (Optional) specify a git [refspec][git-refspec] to pass to git-fetch.
-     Note that if this field is specified, it must specify all refs, branches, tags,
-     or commits required to checkout the specified `revision`. An additional fetch
-     will not be run to obtain the contents of the revision field. If no refspec
-     is specified, the value of the `revision` field will be fetched directly.
-     The refspec is useful in manipulating the repository in several cases:
-     * when the server does not support fetches via the commit SHA (i.e. does
-       not have `uploadpack.allowReachableSHA1InWant` enabled) and you want
-       to fetch and checkout a specific commit hash from a ref chain.
-     * when you want to fetch several other refs alongside your revision
-       (for instance, tags)
-     * when you want to checkout a specific branch, the revision and refspec
-       fields can work together to be able to set the destination of the incoming
-       branch and switch to the branch.
+1.  `url`: 表示git仓库的位置，你可以使用此参数来改变仓库，例如[使用fork](#使用fork)
+1.  `revision`: 需要拷贝的Git [版本][git-rev] (分支, 标签, 提交 SHA 或者 ref). 你可以使用此来控制那个提交[或分支](#使用分支)被使用，[git checkout][git-checkout]用来切换版本，在多数情况下的结果是分离HEAD。通过使用refspec来指定revision的方式来迁出具体的分支而不用分离HEAD. _如果没有revision被指定，将使用默认的`master`._
+1.  `refspec`: (可选)指定一个git[refspec][git-refspec]传递到git-fetch.
+     如果此字段被指定，它必须指定所有refs，分支以及标签或者提交来签出指定的`revision`。附加的提取不用运行来获得revision字段. 如果没有refspec被指定，`revision`字段将会被直接提取. refspec可在以下几种情况下用于操作仓库:
+     * 当服务器不支持通过提交SHA（如不允许`uploadpack.allowReachableSHA1InWant`）而你又需要提取和签出某个ref链对应的提交SHA时.
+     * 当你需要提取多个其他的refs版本时（例如标签）
+     * 当你想要签出指定的分支，revision和refspec可以配合使用来设置进入的分支目标以及切换到分支.
 
-        Examples:
-         - Check out a specified revision commit SHA1 after fetching ref (detached) <br>
+        例如:
+         - 在提取ref（分离）后签出指定的版本提交SHA1<br>
            &nbsp;&nbsp;`revision`: cb17eba165fe7973ef9afec20e7c6971565bd72f <br>
            &nbsp;&nbsp;`refspec`: refs/smoke/myref <br>
-         - Fetch all tags alongside refs/heads/master and switch to the master branch
-           (not detached) <br>
+         - 提取refs/heads/master所有的标签，然后切换到master分支
+           (没有分离) <br>
            &nbsp;&nbsp;`revision`: master <br>
            &nbsp;&nbsp;`refspec`: "refs/tags/\*:refs/tags/\* +refs/heads/master:refs/heads/master"<br>
-         - Fetch the develop branch and switch to it (not detached) <br>
+         - 提取develop分支然后切换到此分支(没有分离) <br>
            &nbsp;&nbsp;`revision`: develop <br>
            &nbsp;&nbsp;`refspec`: refs/heads/develop:refs/heads/develop <br>
-         - Fetch refs/pull/1009/head into the master branch and switch to it (not detached) <br>
+         - 提取 refs/pull/1009/head 到master 分支，然后切换到此分支(没有分离) <br>
            &nbsp;&nbsp;`revision`: master <br>
            &nbsp;&nbsp;`refspec`: refs/pull/1009/head:refs/heads/master <br>
 
@@ -358,7 +317,7 @@ resourceResults:
     name: skaffold-git
 ```
 
-#### Using a fork
+#### 使用fork
 
 The `Url` parameter can be used to point at any git repository, for example to
 use a GitHub fork at master:
@@ -371,7 +330,7 @@ spec:
       value: https://github.com/bobcatfish/wizzbang.git
 ```
 
-#### Using a branch
+#### 使用分支
 
 The `revision` can be any
 [git commit-ish (revision)](https://git-scm.com/docs/gitrevisions#_specifying_revisions).
