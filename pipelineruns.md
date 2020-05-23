@@ -6,70 +6,55 @@ weight: 4
 -->
 # PipelineRuns
 
-This document defines `PipelineRuns` and their capabilities.
+本文档说明`PipelineRuns`对象及其功能.
 
-On its own, a [`Pipeline`](pipelines.md) declares what [`Tasks`](tasks.md) to
-run, and [the order they run in](pipelines.md#ordering). To execute the `Tasks`
-in the `Pipeline`, you must create a `PipelineRun`.
+[`Pipeline`](pipelines.md)定义需要运行那些[`Tasks`](tasks.md)以及[它们的运行顺序](pipelines.md#ordering).要执行`Pipeline`中的`Tasks`，你必须创建一个`PipelineRun`.
 
-Creation of a `PipelineRun` will trigger the creation of
-[`TaskRuns`](taskruns.md) for each `Task` in your pipeline.
+创建一个`PipelineRun`将会触发为管道中的每一个`Task`创建其[`TaskRuns`](taskruns.md).
 
 ---
 
 - [PipelineRuns](#pipelineruns)
-  - [Syntax](#syntax)
-    - [Specifying a pipeline](#specifying-a-pipeline)
-    - [Resources](#resources)
-    - [Params](#params)
-    - [Service Account](#service-account)
-    - [Service Accounts](#service-accounts)
-    - [Pod Template](#pod-template)
-  - [PersistentVolumeClaims](#persistentvolumeclaims)
-  - [Workspaces](#workspaces)
-  - [Cancelling a PipelineRun](#cancelling-a-pipelinerun)
+  - [语法](#语法)
+    - [指定管道](#指定管道)
+    - [资源](#资源)
+    - [参数](#参数)
+    - [服务账户](#服务账户)
+    - [多个服务账户](#多个服务账户)
+    - [Pod模版](#Pod模版)
+  - [持久化卷声明](#持久化卷声明)
+  - [工作区](#工作区)
+  - [取消PipelineRun](#取消PipelineRun)
   - [LimitRanges](#limitranges)
 
-## Syntax
+## 语法
 
-To define a configuration file for a `PipelineRun` resource, you can specify the
-following fields:
+定义`PipelineRun`资源的配置文件，你可以指定以下字段:
 
-- Required:
-  - [`apiVersion`][kubernetes-overview] - Specifies the API version, for example
+- 必须:
+  - [`apiVersion`][kubernetes-overview] - API版本, 例如
     `tekton.dev/v1beta1`
-  - [`kind`][kubernetes-overview] - Specify the `PipelineRun` resource object.
-  - [`metadata`][kubernetes-overview] - Specifies data to uniquely identify the
-    `PipelineRun` resource object, for example a `name`.
-  - [`spec`][kubernetes-overview] - Specifies the configuration information for
-    your `PipelineRun` resource object.
-    - [`pipelineRef` or `pipelineSpec`](#specifiying-a-pipeline) - Specifies the [`Pipeline`](pipelines.md) you want to run.
-- Optional:
-  - [`resources`](#resources) - Specifies which
-    [`PipelineResources`](resources.md) to use for this `PipelineRun`.
-  - [`params`](#params) - Specifies which params to be passed to the pipeline specified/referenced by this pipeline run.
-  - [`serviceAccountName`](#service-account) - Specifies a `ServiceAccount` resource
-    object that enables your build to run with the defined authentication
-    information. When a `ServiceAccount` isn't specified, the `default-service-account`
-    specified in the configmap - config-defaults will be applied.
-  - [`serviceAccountNames`](#service-accounts) - Specifies a list of `serviceAccountName`
-    and `PipelineTask` pairs that enable you to overwrite a `ServiceAccount` for a concrete `PipelineTask`.
-  - `timeout` - Specifies timeout after which the `PipelineRun` will fail. If the value of
-    `timeout` is empty, the default timeout will be applied. If the value is set to 0,
-    there is no timeout. `PipelineRun` shares the same default timeout as `TaskRun`. You can
-    follow the instruction [here](taskruns.md#Configuring-default-timeout) to configure the
-    default timeout, the same way as `TaskRun`.
-  - [`podTemplate`](#pod-template) - Specifies a [pod template](./podtemplates.md) that will be used as the basis for the `Task` pod.
+  - [`kind`][kubernetes-overview] - k8s资源类型，固定为`PipelineRun`.
+  - [`metadata`][kubernetes-overview] - `PipelineRun`资源对象的元数据，如`name`.
+  - [`spec`][kubernetes-overview] - `PipelineRun`资源对象的配置信息.
+    - [`pipelineRef` 或者 `pipelineSpec`](#指定管道) - 指定你需要运行的[`Pipeline`](pipelines.md).
+- 可选:
+  - [`resources`](#资源) - 指定此`PipelineRun`所需要使用的
+    [`PipelineResources`](resources.md) .
+  - [`params`](#参数) - 指定传递给管道的参数.
+  - [`serviceAccountName`](#服务账户) - 指定一个`ServiceAccount`资源对象允许你的构建在定义的认证信息下运行，当没有指定`ServiceAccount`时，将使用配置映射中的`default-service-account`配置 - 默认配置将会被使用.
+  - [`serviceAccountNames`](#多个服务账户) - 指定一个`serviceAccountName`列表，以及`PipelineTask`对允许你为具体的`PipelineTask`设置对应的`ServiceAccount`.
+  - `timeout` - 设置`PipelineRun`运行超时时间，如果`timeout`为空，将使用默认的超时时间，如果值设置为0，表示没有超时时间，`PipelineRun`为`TaskRun`共享相同的默认超时时间，你可以通过[here](taskruns.md#配置默认超时时间)配置默认超时时间，方式与`TaskRun`一致.
+  - [`podTemplate`](#Pod模版) - 指定[pod模版](./podtemplates.md)，这将作为`Task`运行时对应Pod的基础模版.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
 
-### Specifying a pipeline
+### 指定管道
 
-Since a `PipelineRun` is an invocation of a [`Pipeline`](pipelines.md), you must specify
-what `Pipeline` to invoke.
+由于`PipelineRun`是[`Pipeline`](pipelines.md)的执行者，所以你必须指定那个`Pipeline`要被执行.
 
-You can do this by providing a reference to an existing `Pipeline`:
+你可以直接引用一个以及存在的`Pipeline`:
 
 ```yaml
 spec:
@@ -78,7 +63,7 @@ spec:
 
 ```
 
-Or you can embed the spec of the `Pipeline` directly in the `PipelineRun`:
+或者直接在`PipelineRun`里面内嵌定义`Pipeline`:
 
 ```yaml
 spec:
@@ -89,24 +74,23 @@ spec:
         name: mytask
 ```
 
-[Here](../examples/v1beta1/pipelineruns/pipelinerun-with-pipelinespec.yaml) is a sample `PipelineRun` to display different
-greetings while embedding the spec of the `Pipeline` directly in the `PipelineRun`.
+[此处](../examples/v1beta1/pipelineruns/pipelinerun-with-pipelinespec.yaml)是一个直接在`PipelineRun`中定义`Pipeline`配置的示例.
 
-After creating such a `PipelineRun`, the logs from this pod are displaying morning greetings:
+在创建示例`PipelineRun`之后，与此相关的pod将会显示“早上好”的消息:
 
 ```bash
 kubectl logs $(kubectl get pods -o name | grep pipelinerun-echo-greetings-echo-good-morning)
 Good Morning, Bob!
 ```
 
-And the logs from this pod are displaying evening greetings:
+以及这个Pod的日志将会显示“晚上好”:
 
 ```bash
 kubectl logs $(kubectl get pods -o name | grep pipelinerun-echo-greetings-echo-good-night)
 Good Night, Bob!
 ```
 
-Even further you can embed the spec of a `Task` directly in the `Pipeline`:
+甚至于，你可以直接在`Pipeline`中内嵌`Task`的定义:
 
 ```yaml
 spec:
@@ -118,24 +102,16 @@ spec:
           ...
 ```
 
-[Here](../examples/v1beta1/pipelineruns/pipelinerun-with-pipelinespec-and-taskspec.yaml) is a sample `PipelineRun` with embedded
-the spec of the `Pipeline` directly in the `PipelineRun` along with the spec of the `Task` under `PipelineSpec`.
+[此处](../examples/v1beta1/pipelineruns/pipelinerun-with-pipelinespec-and-taskspec.yaml)是一个直接通过`PipelineRun`内嵌`Pipeline`定义及`Task`定义的示例.
 
-### Resources
+### 资源
 
-When running a [`Pipeline`](pipelines.md), you will need to specify the
-[`PipelineResources`](resources.md) to use with it. One `Pipeline` may need to
-be run with different `PipelineResources` in cases such as:
+当运行[`Pipeline`](pipelines.md), 你需要指定它所需要的[`PipelineResources`](resources.md)，一个`Pipeline`在不同的场景可能需要不同的`PipelineResources`，例如:
 
-- When triggering the run of a `Pipeline` against a pull request, the triggering
-  system must specify the commit-ish of a git `PipelineResource` to use
-- When invoking a `Pipeline` manually against one's own setup, one will need to
-  ensure one's own GitHub fork (via the git `PipelineResource`), image
-  registry (via the image `PipelineResource`) and Kubernetes cluster (via the
-  cluster `PipelineResource`).
+- 当触发器运行一个`Pipeline`来处理一个pull request，触发器系统就需要指定一个具有commit-ish的git`管道资源`
+- 当根据自己的配置来手动调用一个`Pipeline`时，我们需要确保有自己的GitHub fork（通过git`管道资源`），镜像仓库（通过image`管道资源`）以及Kubernetes集群（通过cluster`管道资源`）.
 
-Specify the `PipelineResources` in the `PipelineRun` using the `resources` section
-in the PipelineRun's spec, for example:
+要指定`PipelineRun`中的`PipelineResources`，需要通过`resources`节点来配置，例如:
 
 ```yaml
 spec:
@@ -151,7 +127,7 @@ spec:
         name: skaffold-image-leeroy-app
 ```
 
-Or you can embed the spec of the `Resource` directly in the `PipelineRun`:
+或者直接在`PipelineRun`中定义`Resource`:
 
 ```yaml
 spec:
@@ -178,13 +154,11 @@ spec:
             value: gcr.io/christiewilson-catfactory/leeroy-app
 ```
 
-### Params
+### 参数
 
-While writing a Pipelinerun, we can specify params that need to be bound to
-the input params of the pipeline specified/referenced by the Pipelinerun.
+当在编写一个PipelineRun时，我们可以指定需要绑定到对应Pipeline的输入参数.
 
-This means that a Pipeline can be run with different input params, by writing Pipelineruns
-which bound different input values to the Pipeline params.
+这意味着管道可以在不同的输入参数下运行，通过编写PipelineRun来绑定不同的输入值的方式来实现.
 
 ```yaml
 spec:
@@ -195,25 +169,16 @@ spec:
     value: "500"
 ```
 
-### Service Account
+### 服务账户
 
-Specifies the `name` of a `ServiceAccount` resource object. Use the
-`serviceAccountName` field to run your `Pipeline` with the privileges of the
-specified service account. If no `serviceAccountName` field is specified, your
-resulting `TaskRuns` run using the service account specified in the ConfigMap
-`configmap-defaults` which if absent will default to the
-[`default` service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server)
-that is in the [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
-of the `TaskRun` resource object.
+指定一个`ServiceAccount`资源对象的`name`，通过`serviceAccountName`字段可使你的`Pipeline`在指定的服务账户权限下运行，如果未指定`serviceAccountName`字段，`TaskRuns`将会使用`configmap-defaults`默认配置映射中的设置，如果没有，将使用`TaskRun`资源对象所在[namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)的 [`default` 服务账户](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server).
 
-For examples and more information about specifying service accounts, see the
-[`ServiceAccount`](./auth.md) reference topic.
+有关指定服务账户的示例及更多详情，请参考
+[`ServiceAccount`](./auth.md).
 
-### Service Accounts
+### 多个服务账户
 
-Specifies the list of `serviceAccountName` and `PipelineTask` pairs. A specified
-`PipelineTask` will be run with the configured `ServiceAccount`,
-overwriting the [`serviceAccountName`](#service-account) configuration, for example:
+指定多个`serviceAccountName` 和 `PipelineTask` 对，特定的`PipelineTask`将会运行于所配置对应的`ServiceAccount`, 最终覆盖[`serviceAccountName`](#服务账户)配置, 例如:
 
 ```yaml
 spec:
@@ -223,7 +188,7 @@ spec:
       serviceAccountName: sa-for-build
 ```
 
-If used with this `Pipeline`, `test-task` will use the `ServiceAccount` `sa-1`, while `build-task` will use `sa-for-build`.
+如果使用此`Pipeline`，`test-task`将会使用`服务账户` `sa-1`，而`build-task`将会使用`sa-for-build`.
 
 ```yaml
 kind: Pipeline
@@ -237,14 +202,13 @@ spec:
         name: test
 ```
 
-### Pod Template
+### Pod模版
 
-Specifies a [pod template](./podtemplates.md) configuration that will be used as the basis for the `Task` pod. This
-allows to customize some Pod specific field per `Task` execution, aka `TaskRun`.
+指定一个[pod模版](./podtemplates.md)配置，用于`Task`pod，这运行你在`Task`执行时可自定义一些pod字段.
 
-In the following example, the `Task` is defined with a `volumeMount`
-(`my-cache`), that is provided by the `PipelineRun`, using a
-`persistentVolumeClaim`. The Pod will also run as a non-root user.
+在以下示例中，`Task`定义了一个`volumeMount`
+(`my-cache`), 它由`PipelineRun`提供, 通过一个
+`persistentVolumeClaim`. 同时，Pod作为non-root用户运行.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -287,43 +251,35 @@ spec:
         claimName: my-volume-claim
 ```
 
-## PersistentVolumeClaims
+## 持久化卷声明
 
-Any persistent volume claims within a `PipelineRun` are bound until the
-corresponding `PipelineRun` or pods are deleted. This also applies to any
-internally generated persistent volume claims.
+任何在`PipelineRun`中的持久化卷在运行时被绑定，直到对应的`PipelineRun`或pods被删除. 这适用于任何内部产生的持久化声明.
 
-## Workspaces
+## 工作区
 
-For a `PipelineRun` to execute a `Pipeline` that declares `workspaces` it needs to map
-those `workspaces` to actual physical volumes.
+`PipelineRun`要执行一个定义了`workspaces`的`Pipeline`，需要将`workspaces`映射到实际的物理卷.
 
-Here are the relevant fields of a `PipelineRun` spec when providing a
-`PersistentVolumeClaim` as a workspace:
+这可通过`PipelineRun`配置中相关的`PersistentVolumeClaim`字段来绑定:
 
 ```yaml
 workspaces:
-- name: myworkspace # must match workspace name in Task
+- name: myworkspace # 必须与Task中的工作区名称一致
   persistentVolumeClaim:
-    claimName: mypvc # this PVC must already exist
+    claimName: mypvc # PVC必须存在
   subPath: my-subdir
 ```
 
-For more examples and complete documentation on configuring `workspaces` in
-`PipelineRun`s see [workspaces.md](./workspaces.md#providing-workspaces-with-pipelineruns).
+有关在`PipelineRun`中配置`workspaces`的示例和完整文档，可参考[workspaces.md](./workspaces.md#providing-workspaces-with-pipelineruns).
 
-Tekton supports several different kinds of `Volume` in `Workspaces`. For a list of
-the different kinds see the section on
-[`VolumeSources` for Workspaces](workspaces.md#volumesources-for-workspaces).
+Tekton`工作区`中可支持多种类型的`Volume`，不同类型的卷列表，可参考
+[工作区的`VolumeSources`](workspaces.md#在Workspaces中指定VolumeSources).
 
-_For a complete example see [the Workspaces PipelineRun](../examples/v1beta1/pipelineruns/workspaces.yaml)
-in the examples directory._
+_完整示例可参考[PipelineRun工作区](../examples/v1beta1/pipelineruns/workspaces.yaml)
+，位于示例目录._
 
-## Cancelling a PipelineRun
+## 取消PipelineRun
 
-In order to cancel a running pipeline (`PipelineRun`), you need to update its
-spec to mark it as cancelled. Related `TaskRun` instances will be marked as
-cancelled and running Pods will be deleted.
+为了取消运行中的管道(`PipelineRun`), 你需要更新它的配置，将其设置为取消状态，其关联的`TaskRun`实例将会被标记为取消，正在运行的Pod将会被删除.
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -337,22 +293,14 @@ spec:
 
 ## LimitRanges
 
-In order to request the minimum amount of resources needed to support the containers
-for `steps` that are part of a `TaskRun`, Tekton only requests the maximum values for CPU,
-memory, and ephemeral storage from the `steps` that are part of a TaskRun. Only the max
-resource request values are needed since `steps` only execute one at a time in a `TaskRun` pod.
-All requests that are not the max values are set to zero as a result.
+为了为支持`TaskRun`中步骤执行容器申请最小量的资源，Tekton只会依据TaskRun中`步骤`资源的最大值，包括CPU，内存以及临时存储. 只需要`步骤`中资源请求的最大值，因为`TaskRun` pod中同一时间只会执行一个步骤.
+所有请求中没有最大值，将会设置为0.
 
-When a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/) is present in a namespace
-with a minimum set for container resource requests (i.e. CPU, memory, and ephemeral storage) where `PipelineRuns`
-are attempting to run, Tekton will search through all LimitRanges present in the namespace and use the minimum
-set for container resource requests instead of requesting 0.
 
-An example `PipelineRun` with a LimitRange is available [here](../examples/v1beta1/pipelineruns/no-ci/limitrange.yaml).
+当在`PipelineRuns`运行的命名空间中设置了[LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/) 来限制容器的资源请求时（如CPU、内存以及临时存储），Tekton将会搜索命名空间所有的LimitRanges，然后使用其最小值作为资源请求限制，而不是使用0.
+
+有关`PipelineRun`中使用`LimitRange`的示例，可参考[此处](../examples/v1beta1/pipelineruns/no-ci/limitrange.yaml).
 
 ---
 
-Except as otherwise noted, the content of this page is licensed under the
-[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/),
-and code samples are licensed under the
-[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+除非另有说明，本页内容采用[Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/)授权协议，示例代码采用[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)授权协议
