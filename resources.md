@@ -290,15 +290,9 @@ spec:
            &nbsp;&nbsp;`revision`: master <br>
            &nbsp;&nbsp;`refspec`: refs/pull/1009/head:refs/heads/master <br>
 
-1.  `submodules`: defines if the resource should initialize and fetch the
-    submodules, value is either `true` or `false`. _If not specified, this will
-    default to true_
-1.  `depth`: performs a [shallow clone][git-depth] where only the most recent
-    commit(s) will be fetched. This setting also applies to submodules. If set to
-     `'0'`, all commits will be fetched. _If not specified, the default depth is 1._
-1.  `sslVerify`: defines if [http.sslVerify][git-http.sslVerify] should be set
-    to `true` or `false` in the global git config. _Defaults to `true` if
-    omitted._
+1.  `submodules`: 定义资源是否需要初始化或获取子模块，值可以为`true`或`false`，_如果未指定，默认值为true_
+1.  `depth`: 提供[前复制][git-depth]功能，只提取最近的提交. 此设置同样应用于子模块. 如果设置为`'0'`, 所有的提交都将被提取. _如果未设置, 默认值为1._
+1.  `sslVerify`: 定义git配置中的[http.sslVerify][git-http.sslVerify]可设置为`true`或者`false`. _如果未设置，默认值为`true`._
 
 [git-rev]: https://git-scm.com/docs/gitrevisions#_specifying_revisions
 [git-checkout]: https://git-scm.com/docs/git-checkout
@@ -306,8 +300,7 @@ spec:
 [git-depth]: https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt
 [git-http.sslVerify]: https://git-scm.com/docs/git-config#Documentation/git-config.txt-httpsslVerify
 
-When used as an input, the Git resource includes the exact commit fetched in the
-`resourceResults` section of the `taskRun`'s status object:
+如果作为输入，Git资源会在`taskRun`对象状态下的`resourceResults`节点记录拉取的确切提交信息:
 
 ```yaml
 resourceResults:
@@ -319,8 +312,7 @@ resourceResults:
 
 #### 使用fork
 
-The `Url` parameter can be used to point at any git repository, for example to
-use a GitHub fork at master:
+`Url`参数可以用来指定任何的git仓库，例如使用GitHub fork master仓库:
 
 ```yaml
 spec:
@@ -332,10 +324,9 @@ spec:
 
 #### 使用分支
 
-The `revision` can be any
+`revision`可以是任何
 [git commit-ish (revision)](https://git-scm.com/docs/gitrevisions#_specifying_revisions).
-You can use this to create a git `PipelineResource` that points at a branch, for
-example:
+你可以通过此来创建一个`PipelineResource`资源，并指定一个分支，例如:
 
 ```yaml
 spec:
@@ -347,8 +338,8 @@ spec:
       value: some_awesome_feature
 ```
 
-To point at a pull request, you can use
-[the pull requests's branch](https://help.github.com/articles/checking-out-pull-requests-locally/):
+要指定一个pull request，你可以使用
+[pull requests's 分支](https://help.github.com/articles/checking-out-pull-requests-locally/):
 
 ```yaml
 spec:
@@ -360,10 +351,9 @@ spec:
       value: refs/pull/52525/head
 ```
 
-#### Using HTTP/HTTPS Proxy
+#### 使用HTTP/HTTPS代理
 
-The `httpProxy` and `httpsProxy` parameter can be used to proxy non-SSL/SSL requests, for example to use an enterprise
-proxy server for SSL requests:
+通过`httpProxy` 和 `httpsProxy`参数可以指定代理访问非SSL或SSL请求, 例如使用企业代理服务器来处理SSL请求：
 
 ```yaml
 spec:
@@ -375,10 +365,9 @@ spec:
       value: "my-enterprise.proxy.com"
 ```
 
-#### Using No Proxy
+#### 不使用代理
 
-The `noProxy` parameter can be used to opt out of proxying, for example, to not proxy HTTP/HTTPS requests to
-`no.proxy.com`:
+通过`noProxy`参数可以用来指定不走代理的请求，例如，访问`no.proxy.com`的时候不走代理:
 
 ```yaml
 spec:
@@ -390,7 +379,7 @@ spec:
       value: "no.proxy.com"
 ```
 
-Note: `httpProxy`, `httpsProxy`, and `noProxy` are all optional but no validation done if all three are specified.
+注意：`httpProxy`, `httpsProxy`, 及 `noProxy`都是可选的，但是如果三个都设置了，也不会做有效性验证.
 
 ### Pull Request Resource
 
