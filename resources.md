@@ -381,23 +381,17 @@ spec:
 
 注意：`httpProxy`, `httpsProxy`, 及 `noProxy`都是可选的，但是如果三个都设置了，也不会做有效性验证.
 
-### Pull Request Resource
+### Pull Request 资源
 
-The `pullRequest` resource represents a pull request event from a source control
-system.
+`pullRequest`资源表示一个来自于源代码控制系统的pull request事件.
 
-Adding the Pull Request resource as an input to a `Task` will populate the
-workspace with a set of files containing generic pull request related metadata
-such as base/head commit, comments, and labels.
+添加一个Pull Request资源作为`Task`任务的输入将会在任务工作区中填充一些列包含pull request相关元数据的文件，例如 base/head提交，提交说明以及标签等.
 
-The payloads will also contain links to raw service-specific payloads where
-appropriate.
+负载也会包含特定服务相关的原始元数据信息.
 
-Adding the Pull Request resource as an output of a `Task` will update the source
-control system with any changes made to the pull request resource during the
-pipeline.
+添加一个Pull Request资源作为`Task`任务的输出，在管道执行过程中对pull request的任何修改都将会更新源代码控制系统.
 
-Example file structure:
+文件结果示例:
 
 ```shell
 /workspace/
@@ -413,27 +407,22 @@ Example file structure:
 /workspace/<resource>/pr.json
 ```
 
-More details:
+更新详情:
 
-Labels are empty files, named after the desired label string.
+标签是空文件，名称为标签字符串.
 
-Statuses describe pull request statuses. It is represented as a set of json
-files.
+状态描述pull request的状态，它是一些列的json文件.
 
-References (head and base) describe Git references. They are represented as a
-set of json files.
+引用（head及base）描述git引用，它是一系列的json文件.
 
-Comments describe a pull request comment. They are represented as a set of json
-files.
+注解描述pull request的备注，它是一些列的json文件.
 
-Other pull request information can be found in `pr.json`. This is a read-only
-resource. Users should use other subresources (labels, comments, etc) to
-interact with the PR.
+其他的pull request信息可以在pr.json文件中获取，它是只读资源，用户需要使用其他的子资源（标签、注解等）来与PR交互.
 
-For an example of the output this resource provides, see
-[`example`](../cmd/pullrequest-init/example).
+有关示例，请参考
+[`示例`](../cmd/pullrequest-init/example).
 
-To create a pull request resource using the `PipelineResource` CRD:
+使用`PipelineResource` CRD来创建pull request:
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -460,33 +449,28 @@ data:
   token: github_personal_access_token_secret # in base64 encoded form
 ```
 
-Params that can be added are the following:
+可以使用以下参数:
 
-1.  `url`: represents the location of the pull request to fetch.
-1.  `provider`: represents the SCM provider to use. This will be "guessed" based
-    on the url if not set. Valid values are `github` or `gitlab` today.
-1.  `insecure-skip-tls-verify`: represents whether to skip verification of certificates
-    from the git server. Valid values are `"true"` or `"false"`, the default being
+1.  `url`: 提取pull request的地址.
+1.  `provider`:  SCM服务提供类型，如果没有指定将会通过url来猜测，有效值可以为`github`或者`gitlab`.
+1.  `insecure-skip-tls-verify`: 表示是否跳过git服务器的证书验证，可以为`"true"` 或者 `"false"`, 默认值为
     `"false"`.
 
-#### Statuses
+#### 状态
 
-The following status codes are available to use for the Pull Request resource:
+pull资源有以下有效状态:
 https://godoc.org/github.com/jenkins-x/go-scm/scm#State
 
 #### Pull Request
 
-The `pullRequest` resource will look for GitHub or GitLab OAuth authentication
-tokens in spec secrets with a field name called `authToken`.
+`pullRequest`资源将会从名称为`authToken`的密文中查找GitHub或者GitLab认证令牌.
 
-URLs should be of the form: https://github.com/tektoncd/pipeline/pull/1
+URL应该采用如下格式: https://github.com/tektoncd/pipeline/pull/1
 
-#### Self hosted / Enterprise instances
+#### 自宿主 / 企业实例
 
-The PullRequest resource works with self hosted or enterprise GitHub/GitLab
-instances. Simply provide the pull request URL and set the `provider` parameter.
-If you need to skip certificate validation set the `insecure-skip-tls-verify`
-parameter to `"true"`.
+PullRequest资源采用自宿主或企业级GitHub/GitLab实例，只需简单地提供pull request URL以及设置`provider`参数.
+如果你需要跳过证书验证，可将`insecure-skip-tls-verify`参数设置为 `"true"`.
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
