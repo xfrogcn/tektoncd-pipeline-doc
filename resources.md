@@ -487,25 +487,18 @@ spec:
       value: github
 ```
 
-### Image Resource
+### Image 资源
 
-An `image` resource represents an image that lives in a remote repository. It is
-usually used as [a `Task` `output`](tasks.md#outputs) for `Tasks` that build
-images. This allows the same `Tasks` to be used to generically push to any
-registry.
+`image`资源表示一个远端仓库上的镜像。它通常作为构建镜像[`任务` `输出`](tasks.md#outputs). 这允许同一个`Tasks`可以将产生的镜像推送到任何仓库.
 
-Params that can be added are the following:
+镜像资源支持以下参数:
 
-1.  `url`: The complete path to the image, including the registry and the image
-    tag
-1.  `digest`: The
-    [image digest](https://success.docker.com/article/images-tagging-vs-digests)
-    which uniquely identifies a particular build of an image with a particular
-    tag. _While this can be provided as a parameter, there is not yet a way to
-    update this value after an image is built, but this is planned in
+1.  `url`: 镜像的完整路径，包括仓库与镜像标签
+1.  `digest`: 
+    [镜像摘要](https://success.docker.com/article/images-tagging-vs-digests)它唯一标识一个构建镜像及标签. _虽然可以作为参数来提供，但是目前还没有方式在构建镜像之后来修改，这已放入以下问题的计划
     [#216](https://github.com/tektoncd/pipeline/issues/216)._
 
-For example:
+例如:
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
@@ -520,17 +513,10 @@ spec:
       value: gcr.io/staging-images/kritis
 ```
 
-#### Surfacing the image digest built in a task
+#### 获取任务中内置的镜像摘要
 
-To surface the image digest in the output of the `taskRun` the builder tool
-should produce this information in a
-[OCI Image Layout](https://github.com/opencontainers/image-spec/blob/master/image-layout.md)
-`index.json` file. This file should be placed on a location as specified in the
-task definition under the default resource directory, or the specified
-`targetPath`. If there is only one image in the `index.json` file, the digest of
-that image is exported; otherwise, the digest of the whole image index would be
-exported. For example this build-push task defines the `outputImageDir` for the
-`builtImage` resource in `/workspace/buildImage`
+要想获取`taskRun`任务输出镜像的摘要，构建镜像的工具应该按照[OCI Image Layout](https://github.com/opencontainers/image-spec/blob/master/image-layout.md)标准生成
+`index.json`文件. 这个文件应该存放在task定义的默认资源目录下或者通过`targetPath`所指定的位置.  如果`index.json`文件中只有一个镜像，这个镜像摘要将会被导出，否则，将导出整个镜像索引的摘要. 以下示例build-push任务定义了`buildImage`资源，并指定路径为`/workspace/buildImage`
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -549,16 +535,14 @@ spec:
   steps: ...
 ```
 
-If no value is specified for `targetPath`, it will default to
+如果没有指定`targetPath`，将会使用默认资源路径
 `/workspace/output/{resource-name}`.
 
-_Please check the builder tool used on how to pass this path to create the
-output file._
+_请检查所使用的工具如何通过传递此路径来常见输出文件._
 
-The `taskRun` will include the image digest in the `resourcesResult` field that
-is part of the `taskRun.Status`
+`taskRun`将会在`taskRun.Status`下的`resourcesResult`字段中包含镜像摘要
 
-for example:
+例如:
 
 ```yaml
 status:
@@ -571,8 +555,7 @@ status:
     ...
 ```
 
-If the `index.json` file is not produced, the image digest will not be included
-in the `taskRun` output.
+如果`index.json`文件不存在，`taskRun`输出中将不会包含镜像摘要.
 
 ### Cluster Resource
 
